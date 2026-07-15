@@ -44,8 +44,8 @@ Three paths. Honor an explicit choice; otherwise infer from how the builder talk
   successful session. See `references/reverse-engineer.md`. **A builder who can't
   articulate their workflow DEFAULTS here** (least articulation required).
 - **research-backed** — research what great looks like externally, then encode it.
-  Reference ships separately; **if `references/research-backed.md` is absent, fall
-  back to describe-first** and say so.
+  See `references/research-backed.md`. Needs web tools; **a web-less session falls
+  back to describe-first with an explicit notice** — never fabricated sources.
 
 ## Step 2 — Baseline capture (before ANY drafting)
 
