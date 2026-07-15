@@ -1,0 +1,10 @@
+# Secrets: never commit real env files (examples are the documented convention)
+.env
+.env.*
+!.env.example
+
+# Scratch output of skill-creator eval/benchmark runs
+*-workspace/
+
+# OS noise
+.DS_Store

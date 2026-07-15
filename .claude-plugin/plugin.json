@@ -1,0 +1,9 @@
+{
+  "name": "skill-factory",
+  "version": "0.1.0",
+  "description": "A factory-in-a-box for building top-tier Claude skills: guided intake, baseline-beating tests, and a built-in self-improvement loop",
+  "author": "Malachi Rose (Augment Growth)",
+  "repository": "https://github.com/augmentgrowth/skill-factory",
+  "license": "MIT",
+  "skills": "./skills/"
+}
