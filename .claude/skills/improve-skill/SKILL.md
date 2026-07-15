@@ -14,6 +14,10 @@ target skill's folder is either genuinely fixed (one commit) or byte-identical t
 state — never a half-edited middle. Run these steps in order. Stop the instant a stop condition
 fires; do not improvise past it.
 
+**Global rule — no git vocabulary reaches the builder, ever.** Not just in the audit section:
+escalations, stop notices, and proposals are all plain language ("I saved the failing example",
+not "I committed the fixture"). Git words are for this file, never for the builder.
+
 ## Step 1 — Static check FIRST
 
 Read the failing skill's `SKILL.md` frontmatter. If `static: true`, this skill never self-edits:
@@ -29,6 +33,12 @@ annealing on; continue.
 2. Classify the failure. **Environmental** — network timeout, rate limit, disk full, transient auth
    — is NOT a skill bug: log a one-line note ("skipped anneal: rate limit, not a skill defect") and
    STOP. Only genuine skill bugs (wrong logic, stale endpoint, bad parse, missing step) proceed.
+3. **Neither?** If the failure is unclassifiable — the expectation itself is contradictory,
+   impossible, or disputed — it is still NOT skipped: capture the case (Step 3) with `expected.md`
+   flagged as **disputed** at the top, then go straight to escalation (Step 6, restore not needed —
+   you changed nothing). Every non-environmental anneal leaves a case commit, even one you can't fix.
+   Likewise, if it is already clear no fix could ever replay green, capture the case and escalate —
+   don't burn the 3 attempts for form's sake.
 
 ## Step 3 — Capture the failing case BEFORE any fix
 
@@ -46,7 +56,9 @@ Serialize the failure so it survives any later rollback:
 
 Repeat up to 3 times:
 
-1. Fix the immediate problem — the script, a `SKILL.md` instruction, or a reference file.
+1. Fix the immediate problem — the script, a `SKILL.md` instruction, or a reference file. **Fix
+   only what the case exercises**; an unrelated defect you notice gets its own case and its own
+   anneal, not a ride-along in this commit.
 2. **Replay:** invoke the skill explicitly against this case's `input.md` (name the skill or point
    the agent at its `SKILL.md`; do not rely on the `/` menu — see Gotchas). Judge the output against
    `expected.md`.
@@ -92,9 +104,11 @@ The builder speaks plain English, never git. Handle these directly:
   (`git log -- <skill-folder>`, add `--since=...` for a window). Translate each commit to one
   plain-English line. No hashes unless asked.
 - **"Undo that" / "go back to yesterday's version."** — path-scoped restore of the skill folder to
-  the requested point (a commit, tag, or date), committed as a **new** commit. Confirm in plain
-  language ("Reverted <skill> to yesterday's version"). Never show the git command; never rewrite
-  history; repo HEAD stays put.
+  the requested point (a commit, tag, or date), committed as a **new** commit. **An explicit undo
+  request executes immediately** — ask a clarifying question only when it is genuinely ambiguous
+  *which* change to undo, never to confirm one you can identify. Confirm afterward in plain
+  language ("Restored <skill> to the version from before that fix"). Never show the git command;
+  never rewrite history; repo HEAD stays put.
 
 If git is unavailable (degraded mode), you cannot capture cases or commit: fix and replay normally,
 skip the git steps with a plain one-line notice, and note the retrofit for when git returns.
