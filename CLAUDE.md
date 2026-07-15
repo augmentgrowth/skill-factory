@@ -125,18 +125,21 @@ existing skills). Degraded mode is a contingency, not the supported path.
 
 ## Harness notes
 
-Supported harnesses: Claude Code (primary) and Codex (verification pending — mark Codex specifics "to
-verify" until confirmed empirically). Authoring stays on the portable core (`name`, `description`, plain
-markdown) so other SKILL.md-compatible harnesses stay compatible without being guaranteed. Differences
-are additive, not conflicting.
+Supported harnesses: Claude Code (primary) and Codex (verified 2026-07-15 against Codex CLI 0.144.0 via
+`codex exec`; build + anneal ran green end-to-end). Authoring stays on the portable core (`name`,
+`description`, plain markdown) so other SKILL.md-compatible harnesses stay compatible without being
+guaranteed. Differences are additive, not conflicting.
 
-| Concern | Claude Code | Codex (to verify) |
+| Concern | Claude Code | Codex (verified) |
 |---|---|---|
-| Project skill discovery | `.claude/skills/` (auto-discovered, incl. nested) | `.agents/skills/` |
-| Personal install target | `~/.claude/skills/` | `~/.codex/skills/` |
-| Ignored frontmatter | — | `context: fork`, `allowed-tools`, `hooks` (Claude-only) |
-| Extra manifest | none | `openai.yaml` may be required (to verify) |
+| Repo spec file | `CLAUDE.md`, auto-loaded | `AGENTS.md` symlink → `CLAUDE.md`; Codex auto-loads repo-root `AGENTS.md` and the symlink resolves (it quoted the spec and routed with no prompt to read it) |
+| Project skill discovery | `.claude/skills/` (auto-discovered, incl. nested) | **No project skill auto-discovery** (not `.claude/skills/`, not `.agents/skills/`). Codex reaches a skill only because `AGENTS.md` instructs it to read `.claude/skills/<name>/SKILL.md` by path. Codex's native auto-discovery is personal-only (`~/.codex/skills`). |
+| Personal install target | `~/.claude/skills/` | `~/.codex/skills/` (or `$CODEX_HOME/skills`) — auto-discovered there |
+| Ignored frontmatter | — | Everything except `name` + `description` is read-inert — so `context: fork`, `allowed-tools`, `hooks`, and `static:` are all ignored (Codex's own skill-creator docs: "the only fields that Codex reads"). The `static:` flag stays portability-free. |
+| Extra manifest | none | `agents/openai.yaml` is **optional** UI metadata only (display name, icon, chips, `policy.allow_implicit_invocation`). Never required — build + anneal ran green with none present. |
 
 **Gotcha:** adding a new skill directory mid-session may not hot-load into the `/` menu. Run with-skill
 tests by explicit invocation — name the skill or point the agent at its `SKILL.md` — not by relying on
-the menu.
+the menu. Under Codex this is not merely a hot-load caveat: project `.claude/skills/` skills are *never*
+auto-loaded as invocable `$skill` entries, so with-skill testing there is **always** by explicit
+`SKILL.md` read (which is exactly how `AGENTS.md` routes into them).

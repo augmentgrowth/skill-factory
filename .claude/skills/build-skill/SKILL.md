@@ -117,4 +117,9 @@ baseline vs with-skill. **The builder judges.**
 - **Hot-load is not guaranteed.** A skill folder created mid-session may not appear in the
   `/` menu; always run the with-skill test by explicit invocation (name it or point the
   agent at its `SKILL.md`), never by relying on the menu.
+- **Under Codex, project skills never auto-load at all.** Step 2's "it auto-loads for the
+  with-skill test" is Claude-Code-only. Codex does not treat `.claude/skills/` as invocable
+  skills (verified 2026-07-15) — the with-skill test there is *always* a direct `SKILL.md`
+  read, which is how `AGENTS.md` already routes into every skill. The `.claude/skills/<name>/`
+  build location is still correct on both harnesses; only the auto-load rationale is Claude-specific.
 - [Grow this from real failures — replace/extend as the flow teaches you something.]
