@@ -108,7 +108,7 @@ check_prompt_for_secrets() {
   check_secret_pattern "$prompt" QUOTED_CREDENTIAL_ASSIGNMENT \
     "(password|passwd|secret|token)[[:space:]]*[=:][[:space:]]*['\"][^'\"]{8,}['\"]" true
   check_secret_pattern "$prompt" UNQUOTED_CREDENTIAL_ASSIGNMENT \
-    '(password|passwd|secret|token|api[_-]?key)[[:space:]]*[=:][[:space:]]*[A-Za-z0-9_/+=.-]{16,}' true
+    "(password|passwd|secret|token|api[_-]?key)[[:space:]]*[=:][[:space:]]*[^[:space:]'\"]{16,}" true
 }
 
 ensure_state_dir() {
@@ -207,6 +207,8 @@ while [[ $# -gt 0 ]]; do
     *) usage ;;
   esac
 done
+
+command -v shasum >/dev/null 2>&1 || die 3 'shasum is not installed; install it before running fable-codex.'
 
 repo=$(target_repo)
 repo_slug=$(repo_slug_for "$repo")

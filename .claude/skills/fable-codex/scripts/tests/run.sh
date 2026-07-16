@@ -353,7 +353,9 @@ scenario_denylist_canonicalization() {
   mkdir -p "$home_repo" "$FABLE_CODEX_HOME"
   git -C "$home_repo" init -q
   ln -s "$home_repo" "$test_home/repo-alias"
-  printf '%s\n' '~/repo-alias' > "$FABLE_CODEX_HOME/denylist"
+  # The literal tilde is the point: this entry exercises ~-expansion.
+  # shellcheck disable=SC2088
+  printf '~/%s\n' 'repo-alias' > "$FABLE_CODEX_HOME/denylist"
   set +e
   (cd "$home_repo" && printf '%s' 'Blocked alias.' | HOME=$test_home \
     "$THREAD_SCRIPT" reviewer start denied-alias) \
@@ -388,6 +390,44 @@ scenario_missing_jq_before_invocation() {
     note_failure 'missing jq message was not human-readable'
 }
 
+scenario_punctuation_credential_scrub() {
+  local status
+  : > "$STUB_LOG"
+  set +e
+  (cd "$repo" && printf 'PASSWORD=p@ssword-with-symbols-12345\n' | \
+    "$THREAD_SCRIPT" reviewer start punct-scrub) \
+    > "$tmp_root/punct-scrub.out" 2> "$tmp_root/punct-scrub.err"
+  status=$?
+  set -e
+  [[ $status -eq 7 ]] || note_failure "punctuation credential expected exit 7, got $status"
+  [[ ! -s "$STUB_LOG" ]] || note_failure 'punctuation credential reached codex'
+  grep -Fq 'UNQUOTED_CREDENTIAL_ASSIGNMENT' "$tmp_root/punct-scrub.err" || \
+    note_failure 'punctuation credential did not name its pattern class'
+  if grep -Fq 'p@ssword' "$tmp_root/punct-scrub.err"; then
+    note_failure 'punctuation credential value was echoed'
+  fi
+}
+
+scenario_missing_shasum_before_invocation() {
+  local minimal_bin=$tmp_root/no-shasum-bin
+  local tool status
+  mkdir -p "$minimal_bin"
+  for tool in bash cat git grep jq; do
+    ln -s "$(command -v "$tool")" "$minimal_bin/$tool"
+  done
+  : > "$STUB_LOG"
+  set +e
+  (cd "$repo" && printf '%s' 'No shasum.' | PATH=$minimal_bin \
+    "$THREAD_SCRIPT" reviewer start missing-shasum) \
+    > "$tmp_root/missing-shasum.out" 2> "$tmp_root/missing-shasum.err"
+  status=$?
+  set -e
+  [[ $status -eq 3 ]] || note_failure "missing shasum expected exit 3, got $status"
+  [[ ! -s "$STUB_LOG" ]] || note_failure 'missing shasum invoked codex'
+  grep -Fq 'shasum is not installed' "$tmp_root/missing-shasum.err" || \
+    note_failure 'missing shasum message was not human-readable'
+}
+
 run_scenario 'start reviewer happy path' scenario_start_reviewer
 run_scenario 'resume reviewer pins sandbox without -s' scenario_resume_reviewer
 run_scenario 'start implementer defaults' scenario_start_implementer
@@ -407,6 +447,8 @@ run_scenario 'unquoted credential assignments are scrubbed' scenario_unquoted_cr
 run_scenario 'repo slug resists old path collisions' scenario_collision_proof_repo_slug
 run_scenario 'denylist canonicalizes home and symlink paths' scenario_denylist_canonicalization
 run_scenario 'missing jq aborts before codex invocation' scenario_missing_jq_before_invocation
+run_scenario 'punctuation-bearing unquoted credentials are scrubbed' scenario_punctuation_credential_scrub
+run_scenario 'missing shasum aborts before codex invocation' scenario_missing_shasum_before_invocation
 
 printf 'SUMMARY: %d/%d scenarios PASS' "$passed" "$total"
 if [[ $failed -gt 0 ]]; then

@@ -76,6 +76,7 @@ fi
 
 command -v "$CODEX_BIN" >/dev/null 2>&1 || die 3 "Codex is not installed or not executable: $CODEX_BIN"
 command -v jq >/dev/null 2>&1 || die 3 'jq is not installed; install jq before running fable-codex.'
+command -v shasum >/dev/null 2>&1 || die 3 'shasum is not installed; install it before running fable-codex.'
 
 if ! auth_output=$("$CODEX_BIN" login status 2>&1); then
   die 4 'Codex is not authenticated; run codex login first.'
