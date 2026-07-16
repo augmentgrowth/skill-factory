@@ -5,14 +5,14 @@
   },
   "metadata": {
     "description": "The Skill Factory: a factory-in-a-box for building top-tier Claude skills.",
-    "version": "0.1.0"
+    "version": "0.2.0"
   },
   "plugins": [
     {
       "name": "skill-factory",
       "source": "./",
       "description": "A factory-in-a-box for building top-tier Claude skills: guided intake, baseline-beating tests, and a built-in self-improvement loop",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "category": "productivity"
     }
   ]

@@ -47,8 +47,8 @@ where nothing auto-loads it.
 ## Auditing demo 3
 
 `artifacts/fable-codex-factory-run/` holds the frozen task and the full with-skill audit trail.
-The built skill itself remains in `.claude/skills/fable-codex/`, because demo 3 records the
-factory’s first real, in-repo stress test rather than a detached example.
+The built skill graduated to its owner's private build home; `skill/` in this folder is a frozen
+snapshot of the SKILL.md, changelog, and cases as they stood at the stress test.
 
 ```
 task.md                 the frozen pm-agent task
@@ -62,7 +62,7 @@ git-history.txt         birth commit, finished-skill commit, and known-good tag
 ```
 
 The matching no-skill arm is frozen at
-`.claude/skills/fable-codex/cases/baseline/`: `input.md` fixes the task and commit;
+`artifacts/fable-codex-factory-run/skill/cases/baseline/`: `input.md` fixes the task and commit;
 `output-baseline.md` preserves the full implementation diff, test result, and run accounting.
 
 ## Reusing these
