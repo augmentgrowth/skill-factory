@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+: "${STUB_LOG:?STUB_LOG must be set}"
+: "${STUB_STDIN_FILE:?STUB_STDIN_FILE must be set}"
+
+printf '%s\n' "$*" >> "$STUB_LOG"
+
+if [[ $# -gt 0 && "${!#}" == - ]]; then
+  cat > "$STUB_STDIN_FILE"
+fi
+
+if [[ ${1:-} == --version ]]; then
+  printf '%s\n' 'stub-codex 0.0.1'
+  exit 0
+fi
+
+case ${1:-} in
+  login)
+    case ${STUB_LOGIN_MODE:-logged-in} in
+      logged-in)
+        printf '%s\n' 'Logged in using ChatGPT'
+        exit 0
+        ;;
+      logged-out)
+        printf '%s\n' 'Logged out'
+        exit 1
+        ;;
+      *)
+        printf '%s\n' 'Logged out'
+        exit "$STUB_LOGIN_MODE"
+        ;;
+    esac
+    ;;
+  exec)
+    output_file=
+    shift
+    while [[ $# -gt 0 ]]; do
+      if [[ "$1" == -o && $# -ge 2 ]]; then
+        output_file=$2
+        shift 2
+      else
+        shift
+      fi
+    done
+
+    if [[ -n "$output_file" ]]; then
+      last_message=${STUB_LAST_MSG:-$'Canned review\n\nVERDICT: APPROVED\n'}
+      printf '%s' "$last_message" > "$output_file"
+    fi
+    if [[ ${STUB_OMIT_THREAD_STARTED:-0} != 1 ]]; then
+      printf '{"type":"thread.started","thread_id":"%s"}\n' "${STUB_THREAD_ID:-t123}"
+    fi
+    printf '%s\n' '{"type":"turn.completed"}'
+    exit "${STUB_EXIT_CODE:-0}"
+    ;;
+  *)
+    printf 'Unsupported stub command: %s\n' "${1:-<none>}" >&2
+    exit 2
+    ;;
+esac
