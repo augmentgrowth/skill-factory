@@ -23,8 +23,19 @@ export STUB_STDIN_FILE=$tmp_root/stub.stdin
 : > "$STUB_STDIN_FILE"
 
 repo_path=$(cd "$repo" && pwd -P)
-repo_slug=${repo_path//\//-}
-repo_slug=${repo_slug#-}
+repo_slug_for() {
+  local path=$1
+  local base=${path##*/}
+  local sanitized digest
+
+  [[ -n "$base" ]] || base=root
+  sanitized=${base//[^A-Za-z0-9._-]/-}
+  sanitized=${sanitized:0:40}
+  digest=$(printf '%s' "$path" | shasum -a 256)
+  digest=${digest%% *}
+  printf '%s-%s\n' "$sanitized" "${digest:0:12}"
+}
+repo_slug=$(repo_slug_for "$repo_path")
 state_root=$FABLE_CODEX_HOME/state/$repo_slug
 
 total=0
@@ -276,6 +287,107 @@ scenario_preflight_missing_codex() {
     note_failure 'missing codex message was not human-readable'
 }
 
+scenario_verdict_must_be_final() {
+  local status output
+  printf '%s\n' 'VERDICT: APPROVED' 'Trailing caveat.' > "$tmp_root/mid-verdict.md"
+  set +e
+  output=$("$VERDICT_SCRIPT" "$tmp_root/mid-verdict.md" 2> "$tmp_root/mid-verdict.err")
+  status=$?
+  set -e
+  [[ $status -eq 9 ]] || note_failure "mid-file verdict expected exit 9, got $status"
+  [[ "$output" == NO_VERDICT ]] || note_failure 'mid-file verdict did not print NO_VERDICT'
+
+  printf '%s\n' 'Review complete.' 'VERDICT: APPROVED' '' '   ' > "$tmp_root/trailing-blanks.md"
+  output=$("$VERDICT_SCRIPT" "$tmp_root/trailing-blanks.md") || \
+    note_failure 'verdict followed only by blank lines returned non-zero'
+  [[ ${output%%$'\n'*} == 'VERDICT: APPROVED' ]] || \
+    note_failure 'trailing blank lines invalidated the verdict'
+}
+
+scenario_unquoted_credential_scrub() {
+  local status
+  : > "$STUB_LOG"
+  set +e
+  (cd "$repo" && printf '%s' 'API_TOKEN=abcdef0123456789abcdef' | \
+    "$THREAD_SCRIPT" reviewer start unquoted-secret) \
+    > "$tmp_root/unquoted-secret.out" 2> "$tmp_root/unquoted-secret.err"
+  status=$?
+  set -e
+  [[ $status -eq 7 ]] || note_failure "unquoted credential expected exit 7, got $status"
+  [[ ! -s "$STUB_LOG" ]] || note_failure 'unquoted credential invoked codex'
+  grep -Fq 'UNQUOTED_CREDENTIAL_ASSIGNMENT' "$tmp_root/unquoted-secret.err" || \
+    note_failure 'unquoted credential error omitted pattern class'
+
+  : > "$STUB_LOG"
+  (cd "$repo" && printf '%s' 'TOKEN=abc123' | "$THREAD_SCRIPT" reviewer start short-placeholder >/dev/null) || \
+    note_failure 'short credential placeholder was blocked'
+  [[ -s "$STUB_LOG" ]] || note_failure 'short credential placeholder did not invoke codex'
+}
+
+scenario_collision_proof_repo_slug() {
+  local repo_one=$tmp_root/slug-collision/a-b/c
+  local repo_two=$tmp_root/slug-collision/a/b-c
+  local path_one path_two slug_one slug_two
+  mkdir -p "$repo_one" "$repo_two"
+  git -C "$repo_one" init -q
+  git -C "$repo_two" init -q
+  path_one=$(cd "$repo_one" && pwd -P)
+  path_two=$(cd "$repo_two" && pwd -P)
+  slug_one=$(repo_slug_for "$path_one")
+  slug_two=$(repo_slug_for "$path_two")
+  [[ "$slug_one" != "$slug_two" ]] || note_failure 'crafted repo paths produced the same slug'
+  (cd "$repo_one" && printf '%s' 'One.' | STUB_THREAD_ID=t-one \
+    "$THREAD_SCRIPT" reviewer start slug-test >/dev/null) || note_failure 'first slug setup failed'
+  (cd "$repo_two" && printf '%s' 'Two.' | STUB_THREAD_ID=t-two \
+    "$THREAD_SCRIPT" reviewer start slug-test >/dev/null) || note_failure 'second slug setup failed'
+  [[ $(< "$FABLE_CODEX_HOME/state/$slug_one/slug-test/reviewer.thread_id") == t-one ]] || \
+    note_failure 'first repo state was not isolated'
+  [[ $(< "$FABLE_CODEX_HOME/state/$slug_two/slug-test/reviewer.thread_id") == t-two ]] || \
+    note_failure 'second repo state was not isolated'
+}
+
+scenario_denylist_canonicalization() {
+  local test_home=$tmp_root/test-home
+  local home_repo=$test_home/real-repo
+  local start_status preflight_status
+  mkdir -p "$home_repo" "$FABLE_CODEX_HOME"
+  git -C "$home_repo" init -q
+  ln -s "$home_repo" "$test_home/repo-alias"
+  printf '%s\n' '~/repo-alias' > "$FABLE_CODEX_HOME/denylist"
+  set +e
+  (cd "$home_repo" && printf '%s' 'Blocked alias.' | HOME=$test_home \
+    "$THREAD_SCRIPT" reviewer start denied-alias) \
+    > "$tmp_root/denied-alias.out" 2> "$tmp_root/denied-alias.err"
+  start_status=$?
+  (cd "$home_repo" && HOME=$test_home "$PREFLIGHT_SCRIPT") \
+    > "$tmp_root/deny-alias-preflight.out" 2> "$tmp_root/deny-alias-preflight.err"
+  preflight_status=$?
+  set -e
+  rm -f -- "$FABLE_CODEX_HOME/denylist"
+  [[ $start_status -eq 6 ]] || note_failure "canonicalized start expected exit 6, got $start_status"
+  [[ $preflight_status -eq 6 ]] || note_failure "canonicalized preflight expected exit 6, got $preflight_status"
+}
+
+scenario_missing_jq_before_invocation() {
+  local minimal_bin=$tmp_root/no-jq-bin
+  local tool status
+  mkdir -p "$minimal_bin"
+  for tool in bash cat git grep shasum; do
+    ln -s "$(command -v "$tool")" "$minimal_bin/$tool"
+  done
+  : > "$STUB_LOG"
+  set +e
+  (cd "$repo" && printf '%s' 'No jq.' | PATH=$minimal_bin \
+    "$THREAD_SCRIPT" reviewer start missing-jq) \
+    > "$tmp_root/missing-jq.out" 2> "$tmp_root/missing-jq.err"
+  status=$?
+  set -e
+  [[ $status -eq 3 ]] || note_failure "missing jq expected exit 3, got $status"
+  [[ ! -s "$STUB_LOG" ]] || note_failure 'missing jq invoked codex'
+  grep -Fq 'jq is not installed' "$tmp_root/missing-jq.err" || \
+    note_failure 'missing jq message was not human-readable'
+}
+
 run_scenario 'start reviewer happy path' scenario_start_reviewer
 run_scenario 'resume reviewer pins sandbox without -s' scenario_resume_reviewer
 run_scenario 'start implementer defaults' scenario_start_implementer
@@ -290,6 +402,11 @@ run_scenario 'implementer network policy' scenario_network_policy
 run_scenario 'state permissions are private' scenario_state_hygiene
 run_scenario 'verdict extraction outcomes' scenario_extract_verdict
 run_scenario 'preflight reports missing codex' scenario_preflight_missing_codex
+run_scenario 'verdict must be the final non-blank line' scenario_verdict_must_be_final
+run_scenario 'unquoted credential assignments are scrubbed' scenario_unquoted_credential_scrub
+run_scenario 'repo slug resists old path collisions' scenario_collision_proof_repo_slug
+run_scenario 'denylist canonicalizes home and symlink paths' scenario_denylist_canonicalization
+run_scenario 'missing jq aborts before codex invocation' scenario_missing_jq_before_invocation
 
 printf 'SUMMARY: %d/%d scenarios PASS' "$passed" "$total"
 if [[ $failed -gt 0 ]]; then

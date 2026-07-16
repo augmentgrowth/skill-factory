@@ -29,6 +29,19 @@ target_repo() {
   fi
 }
 
+repo_slug_for() {
+  local path=$1
+  local base=${path##*/}
+  local sanitized digest
+
+  [[ -n "$base" ]] || base=root
+  sanitized=${base//[^A-Za-z0-9._-]/-}
+  sanitized=${sanitized:0:40}
+  digest=$(printf '%s' "$path" | shasum -a 256)
+  digest=${digest%% *}
+  printf '%s-%s\n' "$sanitized" "${digest:0:12}"
+}
+
 check_denylist() {
   local repo=$1
   local denylist=$FABLE_HOME/denylist
@@ -39,8 +52,16 @@ check_denylist() {
     line=${line#"${line%%[![:space:]]*}"}
     line=${line%"${line##*[![:space:]]}"}
     [[ -z "$line" || "$line" == \#* ]] && continue
-    prefix=${line%/}
+    case "$line" in
+      '~') prefix=$HOME ;;
+      \~/*) prefix=$HOME/${line:2} ;;
+      *) prefix=$line ;;
+    esac
+    prefix=${prefix%/}
     [[ -n "$prefix" ]] || prefix=/
+    if [[ -d "$prefix" ]]; then
+      prefix=$(cd "$prefix" && pwd -P)
+    fi
     if [[ "$repo" == "$prefix" || "$repo" == "$prefix/"* || "$prefix" == / ]]; then
       die 6 "Repository is denylisted: $repo"
     fi
@@ -59,9 +80,16 @@ command -v jq >/dev/null 2>&1 || die 3 'jq is not installed; install jq before r
 if ! auth_output=$("$CODEX_BIN" login status 2>&1); then
   die 4 'Codex is not authenticated; run codex login first.'
 fi
-if grep -Eiq 'logged[[:space:]-]*out|not[[:space:]]+(logged[[:space:]]+in|authenticated)' <<< "$auth_output"; then
-  die 4 'Codex is not authenticated; run codex login first.'
+if printf '%s' "$auth_output" | grep -Eiq 'logged[[:space:]-]*out|not[[:space:]]+(logged[[:space:]]+in|authenticated)'; then
+  auth_scan_status=0
+else
+  auth_scan_status=$?
 fi
+case "$auth_scan_status" in
+  0) die 4 'Codex is not authenticated; run codex login first.' ;;
+  1) ;;
+  *) die 4 'could not verify authentication' ;;
+esac
 
 repo=$(target_repo)
 check_denylist "$repo"
@@ -86,4 +114,3 @@ version=$("$CODEX_BIN" --version 2>/dev/null | sed -n '1p')
 printf 'PREFLIGHT: OK (%s)\n' "$version"
 
 # First-run callers should use --probe-model gpt-5.6-sol once; later runs may skip it.
-

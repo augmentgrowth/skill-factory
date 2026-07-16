@@ -32,12 +32,15 @@ target_repo() {
 
 repo_slug_for() {
   local path=$1
-  local slug=${path//\//-}
-  slug=${slug#-}
-  if [[ -z "$slug" ]]; then
-    slug=root
-  fi
-  printf '%s\n' "$slug"
+  local base=${path##*/}
+  local sanitized digest
+
+  [[ -n "$base" ]] || base=root
+  sanitized=${base//[^A-Za-z0-9._-]/-}
+  sanitized=${sanitized:0:40}
+  digest=$(printf '%s' "$path" | shasum -a 256)
+  digest=${digest%% *}
+  printf '%s-%s\n' "$sanitized" "${digest:0:12}"
 }
 
 check_denylist() {
@@ -50,39 +53,62 @@ check_denylist() {
     line=${line#"${line%%[![:space:]]*}"}
     line=${line%"${line##*[![:space:]]}"}
     [[ -z "$line" || "$line" == \#* ]] && continue
-    prefix=${line%/}
+    case "$line" in
+      '~') prefix=$HOME ;;
+      \~/*) prefix=$HOME/${line:2} ;;
+      *) prefix=$line ;;
+    esac
+    prefix=${prefix%/}
     [[ -n "$prefix" ]] || prefix=/
+    if [[ -d "$prefix" ]]; then
+      prefix=$(cd "$prefix" && pwd -P)
+    fi
     if [[ "$repo" == "$prefix" || "$repo" == "$prefix/"* || "$prefix" == / ]]; then
       die 6 "Repository is denylisted: $repo"
     fi
   done < "$denylist"
 }
 
+check_secret_pattern() {
+  local prompt=$1
+  local class=$2
+  local pattern=$3
+  local ignore_case=${4:-false}
+  local status
+
+  if [[ "$ignore_case" == true ]]; then
+    if printf '%s' "$prompt" | grep -Eiq -- "$pattern"; then
+      status=0
+    else
+      status=$?
+    fi
+  elif printf '%s' "$prompt" | grep -Eq -- "$pattern"; then
+    status=0
+  else
+    status=$?
+  fi
+
+  case "$status" in
+    0) die 7 "Outbound prompt blocked: secret pattern class $class detected; nothing was sent." ;;
+    1) return 0 ;;
+    *) die 7 'secret scan failed; refusing to send' ;;
+  esac
+}
+
 check_prompt_for_secrets() {
   local prompt=$1
-  local class=
 
-  if grep -Eq 'AKIA[0-9A-Z]{16}' <<< "$prompt"; then
-    class=AWS_ACCESS_KEY
-  elif grep -Eq -- '-----BEGIN [A-Z ]*PRIVATE KEY-----' <<< "$prompt"; then
-    class=PRIVATE_KEY
-  elif grep -Eq 'ghp_[A-Za-z0-9]{36}' <<< "$prompt"; then
-    class=GITHUB_TOKEN
-  elif grep -Eq 'github_pat_[A-Za-z0-9_]{22,}' <<< "$prompt"; then
-    class=GITHUB_FINE_GRAINED_TOKEN
-  elif grep -Eq 'sk-[A-Za-z0-9_-]{20,}' <<< "$prompt"; then
-    class=API_SECRET_KEY
-  elif grep -Eq 'xox[baprs]-[A-Za-z0-9-]{10,}' <<< "$prompt"; then
-    class=SLACK_TOKEN
-  elif grep -Eq 'AIza[0-9A-Za-z_-]{35}' <<< "$prompt"; then
-    class=GOOGLE_API_KEY
-  elif grep -Eiq "(password|passwd|secret|token)[[:space:]]*[=:][[:space:]]*['\"][^'\"]{8,}['\"]" <<< "$prompt"; then
-    class=QUOTED_CREDENTIAL_ASSIGNMENT
-  fi
-
-  if [[ -n "$class" ]]; then
-    die 7 "Outbound prompt blocked: secret pattern class $class detected; nothing was sent."
-  fi
+  check_secret_pattern "$prompt" AWS_ACCESS_KEY 'AKIA[0-9A-Z]{16}'
+  check_secret_pattern "$prompt" PRIVATE_KEY '-----BEGIN [A-Z ]*PRIVATE KEY-----'
+  check_secret_pattern "$prompt" GITHUB_TOKEN 'ghp_[A-Za-z0-9]{36}'
+  check_secret_pattern "$prompt" GITHUB_FINE_GRAINED_TOKEN 'github_pat_[A-Za-z0-9_]{22,}'
+  check_secret_pattern "$prompt" API_SECRET_KEY 'sk-[A-Za-z0-9_-]{20,}'
+  check_secret_pattern "$prompt" SLACK_TOKEN 'xox[baprs]-[A-Za-z0-9-]{10,}'
+  check_secret_pattern "$prompt" GOOGLE_API_KEY 'AIza[0-9A-Za-z_-]{35}'
+  check_secret_pattern "$prompt" QUOTED_CREDENTIAL_ASSIGNMENT \
+    "(password|passwd|secret|token)[[:space:]]*[=:][[:space:]]*['\"][^'\"]{8,}['\"]" true
+  check_secret_pattern "$prompt" UNQUOTED_CREDENTIAL_ASSIGNMENT \
+    '(password|passwd|secret|token|api[_-]?key)[[:space:]]*[=:][[:space:]]*[A-Za-z0-9_/+=.-]{16,}' true
 }
 
 ensure_state_dir() {
@@ -204,6 +230,7 @@ prompt=$(cat)
 check_prompt_for_secrets "$prompt"
 
 command -v "$CODEX_BIN" >/dev/null 2>&1 || die 3 "Codex binary not installed or not executable: $CODEX_BIN"
+command -v jq >/dev/null 2>&1 || die 3 'jq is not installed; install jq before running fable-codex.'
 
 if [[ "$subcommand" == resume && ! -f "$state_dir/$role.thread_id" ]]; then
   die 2 "No stored $role thread for '$deliverable'; run start first."

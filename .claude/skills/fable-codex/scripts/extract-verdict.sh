@@ -25,10 +25,11 @@ elif [[ ! -f "$input_file" ]]; then
 fi
 
 record=$(awk '
+  NF { last_nonblank = NR }
   /^VERDICT:[[:space:]]*APPROVED[[:space:]]*$/ { line = NR; tag = "APPROVED" }
   /^VERDICT:[[:space:]]*REVISE[[:space:]]*$/ { line = NR; tag = "REVISE" }
   /^VERDICT:[[:space:]]*CHANGES_REQUIRED[[:space:]]*$/ { line = NR; tag = "CHANGES_REQUIRED" }
-  END { if (line) printf "%d\t%s\n", line, tag }
+  END { if (line && line == last_nonblank) printf "%d\t%s\n", line, tag }
 ' "$input_file")
 
 if [[ -z "$record" ]]; then
@@ -50,4 +51,3 @@ section_line=$(awk -v last="$verdict_line" '
 if [[ -n "$section_line" ]]; then
   sed -n "${section_line},${verdict_line}p" "$input_file"
 fi
-
