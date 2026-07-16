@@ -16,6 +16,26 @@ it. Triggers include "I want a skill for…", "here's my weekly task…", "help 
 `.claude/skills/build-skill/SKILL.md` and follow it. Improvement, learning, and graduation route to
 `improve-skill`, `learn-from-session`, and `graduate-skill` respectively.
 
+## Where skills are born: the build home
+
+Every skill is born in a **build home**: the `.claude/skills/<name>/` tree of a git repo the
+builder owns. Which repo that is depends on how the factory arrived:
+
+- **Cloned factory** — the clone itself is the build home. Skills are born next to the factory
+  skills, exactly as before.
+- **Plugin install** — the factory skills load everywhere, and the build home is the project the
+  builder is standing in. Its `.claude/skills/<name>/` gets the new skill, git-tracked in the
+  builder's own repo. **Never create files inside the plugin's managed cache** — it is read-only
+  and not the builder's repo.
+- **No git repo at the current directory** — ask the builder where their skills should live (an
+  existing repo, or offer to set one up), or fall back to degraded no-git mode per `build-skill`.
+
+Whichever repo a skill is born in is its **permanent system of record**: `improve-skill` anneals
+there in place, and `graduate-skill` copies outward while history stays put. There is no
+migration step. One warning to pass on when relevant: a build home with automated commit crons
+(auto-sync repos) will corrupt the factory's one-commit transaction discipline — prefer a repo
+without one.
+
 ## The three-type taxonomy
 
 Classify every skill before drafting (deep guidance: `templates/taxonomy.md`):
@@ -48,9 +68,10 @@ git-tracked history from birth.
 
 - **Path-scoped staging, always.** Stage the target skill's folder by explicit path. Never a repo-wide
   `add`. Every operation is scoped to the one skill folder you are working on.
-- **Never push. Never rewrite history.** This clone's origin is the public template repo, which builders
-  cannot push to. You commit locally only. Remoting or publishing a builder's factory is a deliberate
-  later step, never automatic.
+- **Never push. Never rewrite history.** You commit locally only. In a cloned factory, origin is the
+  public template repo, which builders cannot push to; in any other build home, pushing is that
+  repo's own workflow and never something the factory does automatically. Remoting or publishing a
+  builder's skills is a deliberate later step, never automatic.
 - **Per-skill known-good tags.** Tag `<skill>/known-good-<n>` at creation-done and again at graduation,
   so a rollback target always exists.
 - **Birth history.** Commit 1 = baseline captured. Commit 2 = skill done (plus the first known-good tag).

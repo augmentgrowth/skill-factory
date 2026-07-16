@@ -22,6 +22,10 @@ A factory-in-a-box for building top-tier [Claude skills](https://docs.claude.com
 
 ## Instantiation
 
+Two paths, and both can build. **Clone** for a self-contained factory: skills are born inside the clone, next to the machinery. **Install as a plugin** to carry the factory into your own projects: the factory skills load everywhere, and skills you build are born in the `.claude/skills/` of whatever git repo you're standing in — your repo, your history. Either way, the repo a skill is born in (its *build home*) stays its permanent system of record; the factory never builds into the plugin's read-only cache.
+
+### Clone (the working factory)
+
 ```bash
 git clone https://github.com/augmentgrowth/skill-factory.git
 cd skill-factory
@@ -29,6 +33,17 @@ cd skill-factory
 ```
 
 That's the whole setup — under 10 minutes on a fresh machine, most of it the clone. Your clone is local-only: the factory agent commits your skills to your local git history and never pushes anywhere.
+
+### Install as a plugin (the skills, everywhere)
+
+```bash
+claude plugin marketplace add augmentgrowth/skill-factory
+claude plugin install skill-factory@skill-factory
+```
+
+The five factory skills then load in every session, namespaced as `skill-factory:build-skill`, `skill-factory:improve-skill`, and so on. The marketplace is named `skill-factory`, not `augmentgrowth` — hence `skill-factory@skill-factory`.
+
+Skills you build via the plugin are committed to whatever git repo you're in — so stand in the repo you want to own the skill before you say "build me a skill." Don't run both paths against the same folder: a clone that's open as a project already auto-loads these skills from `.claude/skills/`, and installing the plugin on top registers a second, namespaced copy of each.
 
 **If the factory skills don't auto-load** (unusual setups): tell the agent directly — *"read `.claude/skills/build-skill/SKILL.md` and follow it."* This manual path is a degraded fallback, not the normal route; if you need it regularly, check that you opened the repo folder itself (not a parent directory) in Claude Code.
 
@@ -39,8 +54,9 @@ That's the whole setup — under 10 minutes on a fresh machine, most of it the c
 ```text
 skill-factory/
 ├── .claude/skills/        # factory skills + every skill you build (auto-loading, git-tracked)
-├── skills -> .claude/skills   # plugin-compatibility symlink
-├── .claude-plugin/plugin.json # plugin identity (future publishing path)
+├── skills -> .claude/skills   # plugin-compatibility symlink (the loader follows it)
+├── .claude-plugin/plugin.json      # plugin identity
+├── .claude-plugin/marketplace.json # marketplace listing (the install path)
 ├── templates/             # skill template, changelog template, taxonomy guidance
 ├── CLAUDE.md              # the factory spec (canonical)
 ├── AGENTS.md -> CLAUDE.md # same spec for Codex and other harnesses
