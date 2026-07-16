@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skill Factory — Watch a Skill Get Built</title>
+<style>
+  :root {
+    --bg: #FAF9F5;
+    --surface: #FFFFFF;
+    --surface-2: #F2F0E9;
+    --border: #E3DFD5;
+    --text: #1F1E1D;
+    --muted: #6C6A65;
+    --faint: #8F8C85;
+    --accent: #D97757;
+    --accent-soft: #FBEFE9;
+    --green: #4F7A52;
+    --green-soft: #EDF3ED;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    --sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Helvetica, Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1F1E1D; --surface: #262624; --surface-2: #2E2C2A; --border: #3C3936;
+      --text: #F5F4EF; --muted: #A8A49D; --faint: #8A867F;
+      --accent: #E08A6B; --accent-soft: #3A2A24;
+      --green: #8FBF93; --green-soft: #26302A;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #1F1E1D; --surface: #262624; --surface-2: #2E2C2A; --border: #3C3936;
+    --text: #F5F4EF; --muted: #A8A49D; --faint: #8A867F;
+    --accent: #E08A6B; --accent-soft: #3A2A24;
+    --green: #8FBF93; --green-soft: #26302A;
+  }
+  :root[data-theme="light"] {
+    --bg: #FAF9F5; --surface: #FFFFFF; --surface-2: #F2F0E9; --border: #E3DFD5;
+    --text: #1F1E1D; --muted: #6C6A65; --faint: #8F8C85;
+    --accent: #D97757; --accent-soft: #FBEFE9;
+    --green: #4F7A52; --green-soft: #EDF3ED;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: var(--sans); line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1160px; margin: 0 auto; padding: 0 24px 80px; }
+  .narrow { max-width: 760px; margin-left: auto; margin-right: auto; }
+
+  /* header */
+  header { padding: 56px 0 8px; }
+  .eyebrow {
+    font-size: 12px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--accent); font-weight: 600; margin-bottom: 14px;
+  }
+  h1 { font-size: clamp(30px, 4.2vw, 44px); line-height: 1.15; margin: 0 0 16px; letter-spacing: -0.02em; }
+  .lede { font-size: 18px; color: var(--muted); margin: 0 0 28px; }
+  .lede strong { color: var(--text); font-weight: 600; }
+
+  .stats { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 8px; }
+  .stat {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px 16px; min-width: 130px;
+  }
+  .stat .n { font-size: 22px; font-weight: 650; letter-spacing: -0.01em; }
+  .stat .l { font-size: 12px; color: var(--faint); margin-top: 2px; }
+
+  .toggle {
+    position: fixed; top: 16px; right: 16px; z-index: 10;
+    background: var(--surface); border: 1px solid var(--border); color: var(--muted);
+    border-radius: 8px; padding: 7px 11px; font: inherit; font-size: 12px; cursor: pointer;
+  }
+  .toggle:hover { color: var(--text); }
+
+  hr.rule { border: 0; border-top: 1px solid var(--border); margin: 44px 0; }
+
+  h2 { font-size: 24px; margin: 0 0 6px; letter-spacing: -0.01em; }
+  h2 + .sub { color: var(--muted); margin: 0 0 24px; font-size: 15px; }
+  h3 { font-size: 16px; margin: 0 0 8px; }
+
+  /* session transcript */
+  .session {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; overflow: hidden;
+  }
+  .session-bar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 11px 16px; border-bottom: 1px solid var(--border);
+    background: var(--surface-2);
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--border); }
+  .session-title { font-size: 12px; color: var(--faint); margin-left: 6px; font-family: var(--mono); }
+  .session-body { padding: 8px 0; }
+
+  .turn { padding: 18px 22px; }
+  .turn.user { background: var(--surface-2); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .who {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px; font-weight: 600; color: var(--faint);
+    text-transform: uppercase; letter-spacing: .07em; margin-bottom: 9px;
+  }
+  .spark { width: 14px; height: 14px; color: var(--accent); flex: none; }
+  .turn p { margin: 0 0 10px; }
+  .turn p:last-child { margin-bottom: 0; }
+  .said { font-size: 16px; }
+
+  .step-chip {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: var(--accent-soft); color: var(--accent);
+    border-radius: 100px; padding: 3px 11px;
+    font-size: 11px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .note { color: var(--muted); font-size: 14px; }
+  .note code, code.inline {
+    font-family: var(--mono); font-size: .88em;
+    background: var(--surface-2); border: 1px solid var(--border);
+    padding: 1px 5px; border-radius: 4px;
+  }
+
+  .commit {
+    display: flex; align-items: center; gap: 10px;
+    margin: 12px 0 2px; padding: 9px 13px;
+    background: var(--green-soft); border: 1px solid var(--border);
+    border-left: 3px solid var(--green); border-radius: 7px;
+    font-family: var(--mono); font-size: 12.5px; color: var(--text);
+  }
+  .commit .sha { color: var(--green); font-weight: 600; }
+  .commit .tagpill {
+    margin-left: auto; font-size: 11px; color: var(--muted);
+    border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; background: var(--surface);
+  }
+  .silent {
+    font-size: 12px; color: var(--faint); font-style: italic;
+    margin-top: 6px;
+  }
+
+  pre {
+    margin: 10px 0 0; padding: 14px 16px; overflow-x: auto;
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 8px; font-family: var(--mono); font-size: 12.5px; line-height: 1.55;
+  }
+  pre.tight { font-size: 12px; }
+
+  ul.checks { list-style: none; padding: 0; margin: 8px 0 0; }
+  ul.checks li { padding-left: 24px; position: relative; font-size: 14.5px; margin-bottom: 5px; color: var(--muted); }
+  ul.checks li::before {
+    content: "✓"; position: absolute; left: 4px; color: var(--green); font-weight: 700;
+  }
+  ul.checks li b { color: var(--text); font-weight: 600; }
+
+  /* side by side */
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 860px) { .compare { grid-template-columns: 1fr; } }
+  .panel {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; display: flex; flex-direction: column; min-width: 0;
+  }
+  .panel-head {
+    padding: 13px 16px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+  }
+  .panel-head .t { font-weight: 650; font-size: 14px; }
+  .panel-head .meta { font-size: 12px; color: var(--faint); font-family: var(--mono); margin-left: auto; }
+  .badge {
+    font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+    border-radius: 4px; padding: 2px 7px;
+  }
+  .badge.before { background: var(--surface-2); color: var(--faint); border: 1px solid var(--border); }
+  .badge.after { background: var(--accent-soft); color: var(--accent); }
+  .panel-body { padding: 16px 18px; font-size: 13.5px; overflow-x: auto; }
+  .panel-body.scroll { max-height: 460px; overflow-y: auto; }
+  .panel-body h4 { font-size: 13px; margin: 14px 0 6px; }
+  .panel-body h4:first-child { margin-top: 0; }
+  .panel-body p { margin: 0 0 9px; }
+  .panel-body ul { margin: 0 0 9px; padding-left: 18px; }
+  .panel-body li { margin-bottom: 4px; }
+  .verdict-line { font-weight: 650; margin-bottom: 12px !important; }
+  .bul { margin: 0 0 9px; padding-left: 16px; text-indent: -16px; }
+
+  .callout {
+    background: var(--surface); border: 1px solid var(--border);
+    border-left: 3px solid var(--accent); border-radius: 8px;
+    padding: 16px 18px; margin: 22px 0;
+  }
+  .callout p { margin: 0; }
+  .callout p + p { margin-top: 9px; }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } }
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px 18px;
+  }
+  .card h3 { margin: 0 0 6px; font-size: 14.5px; }
+  .card p { margin: 0; font-size: 14px; color: var(--muted); }
+
+  footer { color: var(--faint); font-size: 13px; padding-top: 8px; }
+  footer a { color: var(--accent); }
+  .ff { font-family: var(--mono); font-size: 12px; }
+</style>
+</head>
+<body>
+<button class="toggle" id="tt">◐ theme</button>
+<div class="wrap">
+
+<header class="narrow">
+  <div class="eyebrow">Skill Factory · Demo 2</div>
+  <h1>Watch a skill get built</h1>
+  <p class="lede">One real session, start to finish. A marketing lead who writes the same weekly update every Monday walks in with a task and a sample. They walk out with a tested skill — and they never type a git command, or see the word "git."</p>
+  <div class="stats">
+    <div class="stat"><div class="n">7 steps</div><div class="l">intake → done</div></div>
+    <div class="stat"><div class="n">760 → 143</div><div class="l">words, same input</div></div>
+    <div class="stat"><div class="n">2 commits</div><div class="l">run silently for you</div></div>
+    <div class="stat"><div class="n">0</div><div class="l">git commands typed</div></div>
+  </div>
+</header>
+
+<hr class="rule">
+
+<div class="narrow">
+  <h2>The session</h2>
+  <p class="sub">This is the real transcript, condensed. Every artifact shown below was produced by the run.</p>
+</div>
+
+<div class="session narrow">
+  <div class="session-bar">
+    <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+    <span class="session-title">skill-factory — claude code</span>
+  </div>
+  <div class="session-body">
+
+    <div class="turn user">
+      <div class="who">You</div>
+      <p class="said">help me build a skill</p>
+    </div>
+
+    <div class="turn">
+      <div class="who"><svg class="spark" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.1 6.3L20.4 10l-6.3 2.1L12 18.4 9.9 12.1 3.6 10l6.3-1.7L12 2z"/></svg>Claude</div>
+      <span class="step-chip">Step 0 · Preflight</span>
+      <p class="note">Checks quietly, before anything else: is git installed, is an identity configured, is the folder clean? All three pass, so nothing is said about it. If git had been missing, you'd have been offered a one-click install — and if you declined, the build would still run, just without version history.</p>
+      <p class="said" style="margin-top:12px">Happy to. What's a task you do over and over?</p>
+    </div>
+
+    <div class="turn user">
+      <div class="who">You</div>
+      <p class="said">Every Monday I export our channel numbers and write an update for the leadership team. It takes me 40 minutes and it's never the same shape twice.</p>
+    </div>
+
+    <div class="turn">
+      <div class="who"><svg class="spark" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.1 6.3L20.4 10l-6.3 2.1L12 18.4 9.9 12.1 3.6 10l6.3-1.7L12 2z"/></svg>Claude</div>
+      <span class="step-chip">Step 1 · Intake</span>
+      <p class="note">Three ways in. You described the workflow, so this is the <b>describe-first</b> path. (If you couldn't describe it, we'd just do it together once and I'd extract the skill from that session instead — that's <b>reverse-engineer</b>. There's also <b>research-backed</b>, where I go read what great looks like first.)</p>
+      <p class="said" style="margin-top:12px">Paste me a real export — last week's is perfect. I want a fixed sample to test against, because Monday's data won't be Tuesday's.</p>
+    </div>
+
+    <div class="turn user">
+      <div class="who">You</div>
+      <p class="said">[pastes the CSV — 10 channels, spend, conversions, CPA, week over week]</p>
+    </div>
+
+    <div class="turn">
+      <div class="who"><svg class="spark" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.1 6.3L20.4 10l-6.3 2.1L12 18.4 9.9 12.1 3.6 10l6.3-1.7L12 2z"/></svg>Claude</div>
+      <span class="step-chip">Step 2 · Baseline — before any drafting</span>
+      <p class="note">This is the step that makes the whole thing honest, and it happens <b>before a single line of the skill is written</b>. I answer your request with no skill at all, and freeze that output. That's the bar the skill has to beat later — and because it's captured first, I can't quietly grade on a curve once I know what the skill does.</p>
+      <pre class="tight">.claude/skills/weekly-metrics-update/
+└── cases/baseline/
+    ├── input.md            ← your frozen export + the ask
+    └── output-baseline.md  ← what I write with no skill (760 words)</pre>
+      <div class="commit">
+        <span class="sha">858cb76</span><span>weekly-metrics-update: baseline captured</span>
+      </div>
+      <p class="silent">Commit 1 of 2. You didn't ask for this and you won't be told about it — it just means every version of this skill is recoverable from here on.</p>
+    </div>
+
+    <div class="turn">
+      <div class="who"><svg class="spark" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.1 6.3L20.4 10l-6.3 2.1L12 18.4 9.9 12.1 3.6 10l6.3-1.7L12 2z"/></svg>Claude</div>
+      <span class="step-chip">Step 3 · Classify + split</span>
+      <p class="note">Every skill is one of three types, and the type decides what goes in it. This one is a <b>knowledge skill</b> — the information isn't public and isn't in the model. And the baseline just proved it: the analysis was already good. What was missing was your target, your intent, your format.</p>
+      <p class="note" style="margin-top:10px">Then the one-or-many check: is any piece of this reusable somewhere else? "Parse an export and compute deltas" would be — except I already do that natively. Nothing to split out. One skill.</p>
+    </div>
+
+    <div class="turn">
+      <div class="who"><svg class="spark" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.1 6.3L20.4 10l-6.3 2.1L12 18.4 9.9 12.1 3.6 10l6.3-1.7L12 2z"/></svg>Claude</div>
+      <span class="step-chip">Step 4 · Draft</span>
+      <p class="note">Drafted against the quality bar — trigger-shaped description, nothing that restates what I already know, a <code class="inline">## Gotchas</code> section scaffolded at birth. The whole skill is 175 lines and spends almost all of them on four things I had no way to know:</p>
+      <ul class="checks">
+        <li><b>Your blended CPA target is $65.</b> Without it, "+11%" reads as a crisis. With it, the week is $9 under target and fine.</li>
+        <li><b>The nonbrand spend-up was a deliberate test.</b> Not a problem to diagnose — a decision already made.</li>
+        <li><b>Display remarketing is unmanaged long-tail.</b> $900/week nobody runs. It doesn't get a section.</li>
+        <li><b>Five bullets, verdict first, every bullet ends in an action.</b> Your house format, not one invented fresh each week.</li>
+      </ul>
+    </div>
+
+    <div class="turn">
+      <div class="who"><svg class="spark" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.1 6.3L20.4 10l-6.3 2.1L12 18.4 9.9 12.1 3.6 10l6.3-1.7L12 2z"/></svg>Claude</div>
+      <span class="step-chip">Step 5 · Self-critique</span>
+      <p class="note">Five checks run against the draft before you ever see it — voice, principles, anti-patterns, examples, focus — and then an honest report rather than a pitch. On this run, what I flagged as still weak:</p>
+      <p class="note" style="margin-top:10px;padding-left:14px;border-left:2px solid var(--border)">The <code class="inline">$65</code> target and the deliberate-test list are written into the skill. If the target moves next quarter and nobody updates it, the skill will confidently judge every week against a stale number — which is worse than not knowing it at all.</p>
+    </div>
+
+    <div class="turn">
+      <div class="who"><svg class="spark" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.1 6.3L20.4 10l-6.3 2.1L12 18.4 9.9 12.1 3.6 10l6.3-1.7L12 2z"/></svg>Claude</div>
+      <span class="step-chip">Step 6 · Side by side — the done gate</span>
+      <p class="note">Same frozen input, now with the skill. Both outputs go up next to each other and <b>you</b> decide. This gate will not close on my say-so — if you don't think it won, we go back to Step 4.</p>
+      <p class="said" style="margin-top:12px">Here's both. Does the skill win?</p>
+    </div>
+
+    <div class="turn user">
+      <div class="who">You</div>
+      <p class="said">Yes. That's the one I'd actually send.</p>
+    </div>
+
+    <div class="turn">
+      <div class="who"><svg class="spark" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.1 6.3L20.4 10l-6.3 2.1L12 18.4 9.9 12.1 3.6 10l6.3-1.7L12 2z"/></svg>Claude</div>
+      <span class="step-chip">Step 7 · Done + install</span>
+      <div class="commit">
+        <span class="sha">b64ccd1</span><span>weekly-metrics-update: skill done</span>
+        <span class="tagpill">tag: known-good-1</span>
+      </div>
+      <p class="silent">Commit 2 of 2, plus a rollback point — so "go back to the version that worked" is always answerable.</p>
+      <p class="said" style="margin-top:12px">Done. Want me to install this so it works in any folder, not just here?</p>
+    </div>
+
+  </div>
+</div>
+
+<hr class="rule">
+
+<div class="narrow">
+  <h2>The comparison that closed the gate</h2>
+  <p class="sub">Same export. Same model. The only difference is the skill.</p>
+</div>
+
+<div class="compare">
+  <div class="panel">
+    <div class="panel-head">
+      <span class="badge before">Before</span>
+      <span class="t">No skill</span>
+      <span class="meta">760 words</span>
+    </div>
+    <div class="panel-body scroll">
+      <h4>Weekly Channel Update — Leadership</h4>
+      <h4>Headline</h4>
+      <p>Spend rose ~7% week-over-week (~$55.4K vs ~$51.0K) while conversions were roughly flat (987 vs 1,012, down 2.5%). Blended CPA moved from $50.42 to $56.15 (+11%). Effectively all of the added spend went into Google Search Nonbrand, and it did not produce proportional volume.</p>
+      <h4>What Moved</h4>
+      <p><b>Google Search — Nonbrand (the story of the week)</b><br>Spend up $4.2K (+30%) for 9 more conversions (+4%). CPA went from $69.27 to $85.98 (+24%). Impressions up 28%, so we bought reach that didn't convert at prior efficiency…</p>
+      <p><b>Meta — Prospecting (soft, not spend-driven)</b><br>Spend essentially flat (-1%), conversions down 27 (-16%), CPA $76.33 → $89.79 (+18%)…</p>
+      <p><b>Display — Remarketing (small but sharp)</b><br>Conversions fell 12 → 4 on flat spend. CPA $73.33 → $225.00. The absolute dollars are small ($900), but a 3x CPA swing usually signals a tracking problem…</p>
+      <p><b>Affiliate</b><br>Conversions down 71 → 64 (-10%) on flat spend; CPA $33.10 → $37.50…</p>
+      <h4>What Held Up</h4>
+      <ul>
+        <li><b>Email — Promotional:</b> 86 conversions (+9%) at zero media cost.</li>
+        <li><b>Meta — Retargeting:</b> 118 conversions at $27.97 CPA.</li>
+        <li><b>Google Brand:</b> 198 conversions at $20.81.</li>
+        <li><b>Performance Max:</b> 131 conversions at $73.28.</li>
+        <li><b>TikTok — Prospecting:</b> 21 conversions at $88.10…</li>
+        <li><b>LinkedIn — Sponsored:</b> 9 conversions at $233.33…</li>
+      </ul>
+      <h4>Read</h4>
+      <p>The efficiency decline is concentrated, not systemic. Six of ten channels held steady or improved…</p>
+      <h4>Caveats</h4>
+      <ul>
+        <li><b>One week is a short window.</b> These are week-over-week deltas with no trailing baseline…</li>
+        <li><b>Display — Remarketing is likely a measurement issue…</b></li>
+        <li><b>These are last-touch channel numbers.</b> Email's 86 conversions at $0 cost look excellent in isolation…</li>
+        <li><b>No revenue or LTV data in this export.</b>…</li>
+      </ul>
+      <h4>Suggested Next Steps</h4>
+      <ol>
+        <li><b>Nonbrand:</b> Pull a search-term and match-type breakdown… Decide explicitly whether we're scaling for volume or optimizing for efficiency.</li>
+        <li><b>Meta Prospecting:</b> Check creative fatigue metrics…</li>
+        <li><b>Display Remarketing:</b> Verify tag firing…</li>
+        <li><b>Pull revenue by channel</b> for next week's update.</li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <span class="badge after">After</span>
+      <span class="t">With the skill</span>
+      <span class="meta">143 words</span>
+    </div>
+    <div class="panel-body scroll">
+      <p class="verdict-line">We're at $56 blended against our $65 target — a good week, one real dip to work.</p>
+      <p class="bul">• The nonbrand scale-up is doing what we designed it to do: +$4.2K bought 9 more conversions at $86 CPA. That's the cost of the test, and blended still sits $9 under target. Holding the budget through next week.</p>
+      <p class="bul">• Meta prospecting is the one real problem — CPA $76→$90 on flat spend, conversions 169→142. Reads like creative fatigue on our second-largest line. Pulling frequency and CTR trend this week.</p>
+      <p class="bul">• Affiliate slipped to 64 conversions from 71 at a $37 CPA on flat spend — small enough to watch, not act on. Checking partner mix if it repeats.</p>
+      <p class="bul">• Email delivered 86 conversions at zero media cost, our strongest incremental return again.</p>
+      <p class="bul">• Display remarketing conversions fell 12→4 — tag check, not a demand signal.</p>
+    </div>
+  </div>
+</div>
+
+<div class="narrow">
+  <div class="callout">
+    <p><b>The "before" is not a strawman.</b> It's genuinely good analysis — it found the nonbrand story on its own, flagged Display as a probable tracking bug, and volunteered the last-touch attribution caveat unprompted. Nobody wrote it to lose.</p>
+    <p>That's the actual lesson. <b>A skill doesn't make Claude smarter. It makes Claude yours.</b> Every number in the "before" is right. It just buries the verdict, re-opens a decision you'd already made, spends a paragraph on a $900 line nobody manages, and hands leadership four things to decide. The skill didn't add intelligence — it added your target, your intent, and your format.</p>
+  </div>
+</div>
+
+<hr class="rule">
+
+<div class="narrow">
+  <h2>What you're left with</h2>
+  <p class="sub">Five files, two commits, one rollback point — none of which you had to manage.</p>
+
+  <pre>.claude/skills/weekly-metrics-update/
+├── SKILL.md                        175 lines
+├── CHANGELOG.md                    line one written at birth
+└── cases/baseline/
+    ├── input.md                    the frozen export
+    ├── output-baseline.md          the bar it had to beat
+    └── output-with-skill.md        the run that beat it
+
+b64ccd1  weekly-metrics-update: skill done      ← tag: known-good-1
+858cb76  weekly-metrics-update: baseline captured</pre>
+
+  <div class="grid2" style="margin-top:22px">
+    <div class="card">
+      <h3>When it breaks</h3>
+      <p>Say so. The factory writes the failure down as a test case, fixes it, re-runs that exact case to prove the fix, records the trap in Gotchas, and commits. One failure, one permanent lesson.</p>
+    </div>
+    <div class="card">
+      <h3>When you correct it</h3>
+      <p>Corrections you make in a session become proposed edits, ranked by confidence. Nothing is applied without you approving it.</p>
+    </div>
+    <div class="card">
+      <h3>When you want it everywhere</h3>
+      <p>Graduate it — it gets installed so it works in any folder, carrying its Gotchas and its history with it. Install after it wins, never before.</p>
+    </div>
+    <div class="card">
+      <h3>When you want to undo</h3>
+      <p>"Go back to yesterday's version." That's the whole command. The rollback point exists because the factory tagged it without being asked.</p>
+    </div>
+  </div>
+</div>
+
+<hr class="rule">
+
+<footer class="narrow">
+  <p class="ff">Real session, run 2026-07-15 against a cold clone of github.com/augmentgrowth/skill-factory. Both outputs generated from the identical frozen input; the no-skill baseline was captured before the skill existed. Transcript condensed for reading — artifacts, commits, and word counts are unedited.</p>
+</footer>
+
+</div>
+<script>
+  (function () {
+    var b = document.getElementById('tt');
+    b.addEventListener('click', function () {
+      var cur = document.documentElement.getAttribute('data-theme');
+      if (!cur) {
+        cur = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
+      document.documentElement.setAttribute('data-theme', cur === 'dark' ? 'light' : 'dark');
+    });
+  })();
+</script>
+</body>
+</html>

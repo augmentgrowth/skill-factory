@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skill Factory — What a Good Skill Actually Does</title>
+<style>
+  :root {
+    --bg: #FAF9F5; --surface: #FFFFFF; --surface-2: #F2F0E9; --border: #E3DFD5;
+    --text: #1F1E1D; --muted: #6C6A65; --faint: #8F8C85;
+    --accent: #D97757; --accent-soft: #FBEFE9;
+    --green: #4F7A52; --green-soft: #EDF3ED;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    --sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Helvetica, Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1F1E1D; --surface: #262624; --surface-2: #2E2C2A; --border: #3C3936;
+      --text: #F5F4EF; --muted: #A8A49D; --faint: #8A867F;
+      --accent: #E08A6B; --accent-soft: #3A2A24; --green: #8FBF93; --green-soft: #26302A;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #1F1E1D; --surface: #262624; --surface-2: #2E2C2A; --border: #3C3936;
+    --text: #F5F4EF; --muted: #A8A49D; --faint: #8A867F;
+    --accent: #E08A6B; --accent-soft: #3A2A24; --green: #8FBF93; --green-soft: #26302A;
+  }
+  :root[data-theme="light"] {
+    --bg: #FAF9F5; --surface: #FFFFFF; --surface-2: #F2F0E9; --border: #E3DFD5;
+    --text: #1F1E1D; --muted: #6C6A65; --faint: #8F8C85;
+    --accent: #D97757; --accent-soft: #FBEFE9; --green: #4F7A52; --green-soft: #EDF3ED;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--sans); line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 1160px; margin: 0 auto; padding: 0 24px 80px; }
+  .narrow { max-width: 760px; margin-left: auto; margin-right: auto; }
+
+  header { padding: 56px 0 8px; }
+  .eyebrow { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-weight: 600; margin-bottom: 14px; }
+  h1 { font-size: clamp(30px, 4.2vw, 44px); line-height: 1.15; margin: 0 0 16px; letter-spacing: -0.02em; }
+  .lede { font-size: 18px; color: var(--muted); margin: 0 0 28px; }
+  .lede strong { color: var(--text); font-weight: 600; }
+
+  .stats { display: flex; flex-wrap: wrap; gap: 10px; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; min-width: 128px; }
+  .stat .n { font-size: 22px; font-weight: 650; letter-spacing: -0.01em; }
+  .stat .l { font-size: 12px; color: var(--faint); margin-top: 2px; }
+
+  .toggle { position: fixed; top: 16px; right: 16px; z-index: 10; background: var(--surface); border: 1px solid var(--border); color: var(--muted); border-radius: 8px; padding: 7px 11px; font: inherit; font-size: 12px; cursor: pointer; }
+  .toggle:hover { color: var(--text); }
+
+  hr.rule { border: 0; border-top: 1px solid var(--border); margin: 44px 0; }
+  h2 { font-size: 24px; margin: 0 0 6px; letter-spacing: -0.01em; }
+  h2 + .sub { color: var(--muted); margin: 0 0 24px; font-size: 15px; }
+  h3.fmt { font-size: 15px; margin: 0 0 12px; display: flex; align-items: center; gap: 9px; }
+  h3.fmt .num { background: var(--accent-soft); color: var(--accent); border-radius: 5px; font-size: 11px; font-weight: 700; padding: 2px 7px; font-family: var(--mono); }
+
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 36px; }
+  @media (max-width: 860px) { .compare { grid-template-columns: 1fr; } }
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; display: flex; flex-direction: column; min-width: 0; }
+  .panel-head { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: baseline; gap: 10px; }
+  .panel-head .t { font-weight: 650; font-size: 13.5px; }
+  .badge { font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; border-radius: 4px; padding: 2px 7px; }
+  .badge.before { background: var(--surface-2); color: var(--faint); border: 1px solid var(--border); }
+  .badge.after { background: var(--accent-soft); color: var(--accent); }
+  .panel-body { padding: 16px 18px; font-size: 13.5px; max-height: 400px; overflow-y: auto; }
+  .panel-body p { margin: 0 0 10px; }
+  .panel-body p:last-child { margin-bottom: 0; }
+  .panel-body .n { color: var(--faint); font-family: var(--mono); font-size: 11.5px; }
+  .subj { font-weight: 650; }
+
+  .callout { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 8px; padding: 16px 18px; margin: 22px 0; }
+  .callout p { margin: 0; } .callout p + p { margin-top: 9px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 4px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--faint); font-weight: 650; }
+  td:first-child { width: 40%; color: var(--muted); }
+  td b { color: var(--text); }
+
+  footer { color: var(--faint); font-size: 13px; padding-top: 8px; }
+  .ff { font-family: var(--mono); font-size: 12px; }
+</style>
+</head>
+<body>
+<button class="toggle" id="tt">◐ theme</button>
+<div class="wrap">
+
+<header class="narrow">
+  <div class="eyebrow">Skill Factory · Demo 1</div>
+  <h1>What a good skill actually does</h1>
+  <p class="lede">One podcast transcript in. A tweet thread, a LinkedIn post, and a newsletter out. <strong>Same request, same model, same input</strong> — the only variable is whether the skill was loaded. This is what the gap looks like.</p>
+  <div class="stats">
+    <div class="stat"><div class="n">1 input</div><div class="l">podcast transcript</div></div>
+    <div class="stat"><div class="n">3 formats</div><div class="l">thread · post · newsletter</div></div>
+    <div class="stat"><div class="n">107 lines</div><div class="l">the whole skill</div></div>
+  </div>
+</header>
+
+<hr class="rule">
+
+<div class="narrow">
+  <h2>The gap, in one table</h2>
+  <p class="sub">Nothing here is about intelligence. It's about taste, and taste is what a skill carries.</p>
+  <table>
+    <tr><th>Without the skill</th><th>With it</th></tr>
+    <tr><td>Opens "Here's your content repurposed across all three formats! 🚀"</td><td><b>Opens with the story.</b> No preamble, no announcement of the deliverable.</td></tr>
+    <tr><td>Emoji as structure — 🧵 1/ … ✅ … 💡 … 🎯</td><td><b>None.</b> The numbering carries the thread.</td></tr>
+    <tr><td>Six hashtags on the thread, seven on the post</td><td><b>Four, LinkedIn only</b> — where they do something.</td></tr>
+    <tr><td>Three formats that are the same paragraphs reflowed</td><td><b>Three different pieces.</b> The thread has beats; the post has one argument; the newsletter opens on a scene.</td></tr>
+    <tr><td>"Truth bombs." "Couldn't agree more! 🙌" "Drop a comment below! 👇"</td><td><b>A real question</b> that costs the reader something to answer.</td></tr>
+    <tr><td>Quotes get paraphrased into corporate</td><td><b>The good lines survive verbatim.</b> "It's measuring your patience."</td></tr>
+  </table>
+</div>
+
+<hr class="rule">
+
+<div class="narrow">
+  <h2>Side by side</h2>
+  <p class="sub">Scroll each panel. Same transcript on both sides.</p>
+</div>
+
+<h3 class="fmt"><span class="num">01</span> Tweet thread</h3>
+<div class="compare">
+  <div class="panel">
+    <div class="panel-head"><span class="badge before">Before</span><span class="t">No skill</span></div>
+    <div class="panel-body">
+      <p>Here's your content repurposed across all three formats! 🚀</p>
+      <p>🧵 1/ Most A/B tests are basically theater. Here's why 80% of them fail to teach you anything (and how to fix it) 👇</p>
+      <p>2/ The #1 problem? Underpowered tests. If you don't have enough traffic to detect the effect you're looking for, your test literally cannot give you a reliable answer. ⚠️</p>
+      <p>3/ Example: A landing page at 3% conversion needs ~50,000 visitors PER variation to detect a 10% lift. Most teams get 8,000/week. That's 3 months of waiting! ⏳</p>
+      <p>4/ But nobody waits 3 months. They wait 10 days, see the variant up 12%, and call it a win. Spoiler: that 12% is almost entirely noise. 📊</p>
+      <p>6/ So what do the best teams do differently? Three things:<br>✅ Calculate sample size BEFORE launching<br>✅ Test bigger swings (big effects need less traffic!)<br>✅ Kill tests that can't reach significance</p>
+      <p>8/ Bottom line: Volume of tests is a vanity metric. Decisions you can trust are the only output that matters. 🎯</p>
+      <p>What's your experimentation process look like? Drop a comment below! 👇</p>
+      <p class="n">#GrowthMarketing #ABTesting #Experimentation #DataDriven #CRO #MarketingStrategy</p>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-head"><span class="badge after">After</span><span class="t">With the skill</span></div>
+    <div class="panel-body">
+      <p class="n">1</p>
+      <p>An experimentation lead audited a pile of A/B tests and found ~80% were underpowered.</p>
+      <p>Translation: the test could never have detected the effect the team was hoping for. Even if the effect was completely real.</p>
+      <p>They ran it anyway. Saw green. Shipped. Celebrated.</p>
+      <p class="n">2</p>
+      <p>Here's what underpowered looks like at your desk.</p>
+      <p>Landing page converts at 3%. You test a headline, hoping for 3.3%.</p>
+      <p>To detect that reliably: ~50,000 visitors per variation.</p>
+      <p>You get 8,000 a week. Total.</p>
+      <p>That's a three-month test.</p>
+      <p class="n">5</p>
+      <p>Her line for it: "The test isn't measuring the headline. It's measuring your patience."</p>
+      <p>Which means the thing you shipped and the thing you learned have no relationship to each other.</p>
+      <p class="n">8</p>
+      <p>Three, and nobody wants to hear it: kill the tests that can't reach significance.</p>
+      <p>No traffic, no test. Running it anyway isn't rigor — it's a coin flip with a dashboard attached.</p>
+    </div>
+  </div>
+</div>
+
+<h3 class="fmt"><span class="num">02</span> LinkedIn post</h3>
+<div class="compare">
+  <div class="panel">
+    <div class="panel-head"><span class="badge before">Before</span><span class="t">No skill</span></div>
+    <div class="panel-body">
+      <p>🚀 Most A/B tests are basically theater. Here's why. 🚀</p>
+      <p>I recently listened to an incredible conversation with Priya Nair, an experimentation lead, and she dropped some truth bombs about why most A/B testing programs are broken.</p>
+      <p>The shocking stat? Around 80% of the A/B tests she's audited were underpowered. That means they didn't have enough traffic to detect the effect the team was hoping for — even if that effect was real.</p>
+      <p>So what separates the teams that get it right? Three things:</p>
+      <p>1️⃣ They calculate sample size BEFORE launching<br>2️⃣ They test bigger swings (bigger effects need less traffic!)<br>3️⃣ They're willing to kill tests that can't reach significance</p>
+      <p>Couldn't agree more! 🙌</p>
+      <p>What does your experimentation process look like? I'd love to hear your thoughts in the comments! 👇</p>
+      <p class="n">#GrowthMarketing #ABTesting #Experimentation #DataDriven #CRO #MarketingStrategy #Analytics</p>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-head"><span class="badge after">After</span><span class="t">With the skill</span></div>
+    <div class="panel-body">
+      <p>Most A/B tests are theater.</p>
+      <p>That's Priya Nair's line, and she has the audit data behind it. Around 80% of the tests she's reviewed were underpowered — no real chance of detecting the effect the team was hoping for, even if it was there.</p>
+      <p>The shape of it is always the same.</p>
+      <p>Your landing page converts at 3%. You test a headline and hope for 3.3%. Detecting that takes roughly 50,000 visitors per variation, and you're getting 8,000 a week. So the honest version of that test runs three months.</p>
+      <p>You wait ten days instead. The variant is up 12%. You ship it.</p>
+      <p>That 12% isn't the headline working. It's the dashboard swinging — she's seen the same variant look like a 40% winner one day and a 15% loser a week later.</p>
+      <p>That third one is a culture problem, not a stats problem. "We ran an experiment" sounds better in a readout than "we made a judgment call." But the underpowered test is the less scientific of the two. It just hides the guess inside a chart.</p>
+      <p>Her fix isn't more rigor. It's less volume.</p>
+      <p>How many tests did your team run last quarter, and how many were actually powered to answer the question you were asking?</p>
+      <p class="n">#experimentation #growthmarketing #abtesting #analytics</p>
+    </div>
+  </div>
+</div>
+
+<h3 class="fmt"><span class="num">03</span> Newsletter</h3>
+<div class="compare">
+  <div class="panel">
+    <div class="panel-head"><span class="badge before">Before</span><span class="t">No skill</span></div>
+    <div class="panel-body">
+      <p class="subj">Subject: Why Most A/B Tests Fail (And How to Fix Yours)</p>
+      <p>Hi everyone,</p>
+      <p>In this issue, we're diving into a topic that might ruffle some feathers: why most A/B tests are basically theater.</p>
+      <p>I recently came across a fascinating conversation with Priya Nair, an experimentation lead, and she shared some eye-opening insights about why most A/B testing programs don't actually work.</p>
+      <p><b>The Problem: Underpowered Tests</b></p>
+      <p>According to Priya, around 80% of the A/B tests she's audited were underpowered. This means they didn't have enough traffic to detect the effect the team was hoping for, even if the effect was real.</p>
+      <p><b>The Solution: Three Best Practices</b></p>
+      <p>1. They calculate sample size before launching, not after.<br>2. They test bigger swings, because bigger effects are detectable with less traffic.<br>3. They're willing to kill tests that can't reach significance.</p>
+      <p><b>Key Takeaway</b></p>
+      <p>At the end of the day, you'll learn more from 8 real experiments a year than from 80 fake ones.</p>
+      <p>Thanks for reading, and I'll see you in the next issue!</p>
+      <p>If you enjoyed this, feel free to forward it to a friend! 📬</p>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-head"><span class="badge after">After</span><span class="t">With the skill</span></div>
+    <div class="panel-body">
+      <p class="subj">Subject: Most of your A/B tests can't answer the question</p>
+      <p class="n">Preview: Eighty percent are decoration. Here's the arithmetic behind why.</p>
+      <p>Ten days into the test, someone drops the dashboard in Slack. The new headline is up 12%. A few reactions, a quick "nice," and the variant goes live.</p>
+      <p>Nothing about that moment felt wrong. It also wasn't evidence.</p>
+      <p><b>The number that should bother you</b></p>
+      <p>Priya Nair audits other teams' experimentation programs. According to Nair, roughly 80% of the A/B tests she's reviewed were underpowered…</p>
+      <p>Underpowered is a statistics word, which is why it slides past everyone in the room. So here's what it means in practice.</p>
+      <p><b>Why the last one is the hard one</b></p>
+      <p>It isn't a statistics problem. It's a readout problem.</p>
+      <p>"We ran an experiment" plays better in a room than "we made a judgment call." So the experiment gets run, the noise gets collected, and the slide gets made.</p>
+      <p>But the underpowered test is the less scientific of the two options. A judgment call at least leaves the uncertainty visible. The test launders it.</p>
+      <p><b>Try this before your next launch</b></p>
+      <p>One question, answered in writing, before anyone builds a variant: how long would this need to run to detect the smallest lift I'd actually act on?</p>
+      <p>And about that ten-day readout — the variant might really have been a winner. That's the part that stings. You have no way of knowing.</p>
+    </div>
+  </div>
+</div>
+
+<div class="narrow">
+  <div class="callout">
+    <p><b>Read the "before" again.</b> It isn't wrong. Every fact is accurate, every number is right, the structure is clean. If you'd never seen the "after," you'd have shipped it.</p>
+    <p>That's the trap a skill gets you out of. Claude's default is competent and generic — and generic is exactly what fails when the output carries your name. The 107 lines of this skill are almost entirely <b>taste</b>: kill the emoji, three formats means three pieces, keep the quote that lands, ask a question worth answering. None of it is knowledge Claude lacked. All of it is judgment Claude had no way to know was yours.</p>
+  </div>
+</div>
+
+<hr class="rule">
+
+<footer class="narrow">
+  <p class="ff">Both sides generated 2026-07-15 from the identical transcript in content-repurposer/cases/baseline/input.md. The no-skill baseline ships with the skill and is unedited. Panels are excerpted for length; nothing is rewritten. github.com/augmentgrowth/skill-factory</p>
+</footer>
+
+</div>
+<script>
+  (function () {
+    var b = document.getElementById('tt');
+    b.addEventListener('click', function () {
+      var cur = document.documentElement.getAttribute('data-theme');
+      if (!cur) cur = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', cur === 'dark' ? 'light' : 'dark');
+    });
+  })();
+</script>
+</body>
+</html>

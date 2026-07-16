@@ -1,0 +1,9 @@
+# Git history from the demo-2 run (real, unedited)
+# Cold clone of augmentgrowth/skill-factory, 2026-07-15.
+# The builder typed zero git commands; the factory made both commits.
+
+b64ccd1 weekly-metrics-update: skill done — beats baseline side by side
+858cb76 weekly-metrics-update: baseline captured
+
+# rollback point set automatically at done:
+weekly-metrics-update/known-good-1
