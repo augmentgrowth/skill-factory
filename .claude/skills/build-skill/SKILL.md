@@ -90,6 +90,15 @@ Run the five checks in `references/self-critique.md` (Voice / Principles / Anti-
 / Example / Focus) and fix what fails **before showing the builder the draft**. Present
 an honest assessment: what improved, what is still weak, what you need answered.
 
+**Script efficiency pass (script-backed drafts only).** If the draft added or changed
+anything in `scripts/`, dispatch a **fresh sub-agent** to run the sibling
+`graduate-skill/references/script-efficiency-review.md` checklist against those scripts
+and return severity-ranked findings only — the pass reads far more than it reports,
+which is exactly the context-isolation case sub-agents are for. Fix every CRITICAL and
+HIGH before Step 6; note MEDIUM/LOW for the builder. This is the same checklist
+graduation re-runs as its gate — catching issues at write time means graduation should
+find nothing.
+
 ## Step 6 — Side-by-side test (the done gate)
 
 Re-run the **same** frozen `cases/baseline/input.md`, now WITH the skill — by explicit

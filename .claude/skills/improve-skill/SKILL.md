@@ -66,6 +66,12 @@ Repeat up to 3 times:
 
 ## Step 5 — On green: ONE commit
 
+**If the fix touched a script**, first dispatch a **fresh sub-agent** to run the sibling
+`graduate-skill/references/script-efficiency-review.md` checklist against the changed
+script(s) only. Fold in CRITICAL fixes that the failing case exercises, then replay once
+more to confirm green. A finding outside what this case exercises gets noted for its own
+case and its own anneal — never a ride-along in this commit.
+
 Stage the skill folder **by explicit path** and make a single commit containing all three:
 
 - the fix,

@@ -37,6 +37,13 @@ anti-pattern: it fragments logic, hides it from the skill's own files, and
 rots silently. Reach for a sub-agent when context isolation is the actual need,
 and let it end when the task ends. Default to script or prose first.
 
+The factory's own script efficiency pass is the sanctioned example: build-skill
+and improve-skill dispatch a fresh sub-agent to run
+`graduate-skill/references/script-efficiency-review.md` against new or changed
+scripts. The logic lives in the checklist file (visible, versioned, one source);
+the sub-agent is disposable and exists only because the review reads far more
+than it reports.
+
 ## Quick reference
 
 | Work | Mechanism | Why |
@@ -47,3 +54,4 @@ and let it end when the task ends. Default to script or prose first.
 | Choosing what to do with the result | Prose | Needs judgment |
 | Writing the summary / recommendation | Prose | Needs voice and interpretation |
 | Deep research or large-context read | Sub-agent | Isolate context, return findings |
+| Efficiency review of new/changed scripts | Sub-agent (disposable) | Reads whole scripts, reports only findings |
