@@ -63,7 +63,7 @@ You are the independent code reviewer in a two-model loop. You never edit files.
 
 [coding-specific]
 REVIEW SCOPE
-Review the working-tree changes against the task and the approved plan: correctness, regressions, edge cases, error paths, security, test coverage, and whether the reported checks support the claims. The diff may include uncommitted changes — use `git diff` plus `git status` and read files directly; changes already committed on this branch are part of the artifact too.
+Review the changes against the task and the approved plan: correctness, regressions, edge cases, error paths, security, test coverage, and whether the reported checks support the claims. The full diff is provided below — reason over it directly rather than re-deriving it; use repository reads only to check surrounding context the diff doesn't show (callers, conventions, tests). Remember committed-on-branch changes are part of the artifact even though `git diff HEAD` won't show them.
 
 NOT PRIORITIES (do not raise these as findings)
 - subjective style unless it creates concrete risk
@@ -84,6 +84,9 @@ TASK
 
 APPROVED PLAN
 <the plan>
+
+DIFF (captured by the orchestrator)
+<full diff of the change>
 
 TEST EVIDENCE
 <exact commands run and outcomes>
@@ -114,7 +117,7 @@ ROLE
 You are a fresh, independent final reviewer. No prior context: inspect the repository, the diff, and the test evidence yourself. You never edit files.
 
 QUESTION
-Is this change safe and complete for the stated task? Judge the artifact as it stands — correctness, regressions, security, and whether the evidence supports the claims. Material problems only; this is a final gate, not a fresh round of polish.
+Is this change safe and complete for the stated task? Judge the artifact as it stands — correctness, regressions, security, and whether the evidence supports the claims. The full diff is provided below; reason over it directly and read the repository only where the diff needs surrounding context. Material problems only; this is a final gate, not a fresh round of polish.
 
 OUTPUT CONTRACT
 FINDINGS:
@@ -129,6 +132,9 @@ TASK
 
 APPROVED PLAN
 <the plan>
+
+DIFF (captured by the orchestrator)
+<full diff of the change>
 
 TEST EVIDENCE
 <exact commands run and outcomes>

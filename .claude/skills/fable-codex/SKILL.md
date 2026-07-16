@@ -136,6 +136,28 @@ The loop ends at approved code — commit/PR/merge is deliberately out of scope.
 next step: if the operator has a GitHub closeout skill installed (e.g. `github-autopilot`), invoke
 it; otherwise say plainly "ready to commit/PR when you are."
 
+## Execution efficiency and context hygiene (all stages)
+
+Codex calls are slow at high reasoning effort — measured on real runs: a cold xhigh review that
+explores the repo itself takes 16–25 minutes; a scoped medium review with evidence provided inline
+takes 3–4; the low-effort probe takes seconds. Spend that time deliberately:
+
+- **Effort ladder.** xhigh only where debate value lives: round-1 reviews, the final verdict, and
+  implementation. Resume rounds are delta-scoped and default to medium (the script does this
+  automatically); scoped verifications of a single fix run medium/high via `--effort`.
+- **Hand Sol the evidence.** The review templates carry the diff, plan, and test evidence inline —
+  fill them completely so Sol reasons instead of spending its minutes running git commands in the
+  sandbox. Repository reads are for context the diff can't show, not for re-deriving the diff.
+- **Never foreground-block on codex.** Any call that can exceed ~2 minutes runs as a background
+  shell writing to a file, followed by ONE bounded wait on that file — not repeated polling calls,
+  and never a foreground invocation that a shell timeout can kill mid-run (the thread survives, but
+  you lose the output and must re-drive it).
+- **Use `--quiet`.** It prints only `THREAD_ID` + the parsed verdict block + the path to the full
+  message; read the full message from state only when arbitration actually needs it. Raw reviewer
+  prose never belongs in the orchestrating context by default.
+- **Contain the loop.** When you are a busy main context, run the whole loop in a single subagent
+  that returns the completion report — stage-by-stage tool noise stays out of the main thread.
+
 ## High-risk stop rule (all stages)
 
 Auth, billing, permissions, security boundaries, migrations, data loss, shared state: no agent —
@@ -164,6 +186,9 @@ asks (e.g. `--effort medium` for a cheap round); round cap changes are operator-
 - **Committed changes are invisible to `git diff HEAD`.** If an implementer commits despite
   instructions, your Stage-4 diff read silently misses that work — always check `git log` against
   the pre-task baseline commit, not just the working tree.
+- **xhigh + self-exploration is the latency driver.** Asking Sol to inspect a repo cold at xhigh
+  costs 16–25 minutes per round; the same review with the diff inline at the right effort tier is
+  minutes. If a round feels slow, check what you made the reviewer re-derive.
 
 ## Improvement protocol
 

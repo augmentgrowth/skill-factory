@@ -428,6 +428,40 @@ scenario_missing_shasum_before_invocation() {
     note_failure 'missing shasum message was not human-readable'
 }
 
+scenario_resume_effort_default() {
+  local log_line
+  (cd "$repo" && printf '%s' 'First.' | "$THREAD_SCRIPT" reviewer start effort-default >/dev/null) || \
+    note_failure 'setup start failed'
+  log_line=$(tail -n 1 "$STUB_LOG")
+  grep -Eq '(^|[[:space:]])-c[[:space:]]+model_reasoning_effort=xhigh([[:space:]]|$)' <<< "$log_line" || \
+    note_failure 'start did not default to xhigh effort'
+  : > "$STUB_LOG"
+  (cd "$repo" && printf '%s' 'Delta.' | "$THREAD_SCRIPT" reviewer resume effort-default >/dev/null) || \
+    note_failure 'resume failed'
+  log_line=$(tail -n 1 "$STUB_LOG")
+  grep -Eq '(^|[[:space:]])-c[[:space:]]+model_reasoning_effort=medium([[:space:]]|$)' <<< "$log_line" || \
+    note_failure 'resume did not default to medium effort'
+  : > "$STUB_LOG"
+  (cd "$repo" && printf '%s' 'Deep delta.' | "$THREAD_SCRIPT" reviewer resume effort-default --effort xhigh >/dev/null) || \
+    note_failure 'resume with explicit effort failed'
+  log_line=$(tail -n 1 "$STUB_LOG")
+  grep -Eq '(^|[[:space:]])-c[[:space:]]+model_reasoning_effort=xhigh([[:space:]]|$)' <<< "$log_line" || \
+    note_failure 'explicit --effort did not override the resume default'
+}
+
+scenario_quiet_output() {
+  local output
+  output=$(cd "$repo" && printf '%s' 'Review quietly.' | \
+    STUB_LAST_MSG=$'Long exploratory analysis body that should stay out of context.\nBLOCKERS:\n- None\nVERDICT: APPROVED' \
+    "$THREAD_SCRIPT" reviewer start quiet-mode --quiet) || note_failure 'quiet start returned non-zero'
+  grep -Fq 'THREAD_ID: t123' <<< "$output" || note_failure 'quiet output lacked thread marker'
+  grep -Fq 'VERDICT: APPROVED' <<< "$output" || note_failure 'quiet output lacked parsed verdict'
+  grep -Fq 'FULL_MESSAGE:' <<< "$output" || note_failure 'quiet output lacked full-message path'
+  if grep -Fq 'Long exploratory analysis body' <<< "$output"; then
+    note_failure 'quiet mode leaked the message body'
+  fi
+}
+
 run_scenario 'start reviewer happy path' scenario_start_reviewer
 run_scenario 'resume reviewer pins sandbox without -s' scenario_resume_reviewer
 run_scenario 'start implementer defaults' scenario_start_implementer
@@ -449,6 +483,8 @@ run_scenario 'denylist canonicalizes home and symlink paths' scenario_denylist_c
 run_scenario 'missing jq aborts before codex invocation' scenario_missing_jq_before_invocation
 run_scenario 'punctuation-bearing unquoted credentials are scrubbed' scenario_punctuation_credential_scrub
 run_scenario 'missing shasum aborts before codex invocation' scenario_missing_shasum_before_invocation
+run_scenario 'resume defaults to medium effort, override wins' scenario_resume_effort_default
+run_scenario 'quiet mode emits verdict only' scenario_quiet_output
 
 printf 'SUMMARY: %d/%d scenarios PASS' "$passed" "$total"
 if [[ $failed -gt 0 ]]; then

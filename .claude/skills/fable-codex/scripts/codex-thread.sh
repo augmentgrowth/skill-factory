@@ -10,7 +10,7 @@ FABLE_HOME=${FABLE_CODEX_HOME:-"$HOME/.fable-codex"}
 
 usage() {
   printf '%s\n' \
-    'Usage: codex-thread.sh <reviewer|implementer> <start|resume|fresh|reset|show> [deliverable-slug] [--model M] [--effort E] [--network]' >&2
+    'Usage: codex-thread.sh <reviewer|implementer> <start|resume|fresh|reset|show> [deliverable-slug] [--model M] [--effort E] [--network] [--quiet]' >&2
   exit 2
 }
 
@@ -180,6 +180,13 @@ case "$subcommand" in
   *) usage ;;
 esac
 
+# Incremental resume rounds are scoped to a delta, so they default to a cheaper
+# reasoning effort (measured: xhigh cold review ~16-25 min, medium scoped ~3-4 min).
+# An explicit --effort always wins.
+if [[ "$subcommand" == resume ]]; then
+  effort=medium
+fi
+
 deliverable=default
 if [[ $# -gt 0 && "$1" != --* ]]; then
   deliverable=$1
@@ -188,6 +195,7 @@ fi
 [[ "$deliverable" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || die 2 'Deliverable slug must contain only letters, digits, dots, underscores, and hyphens.'
 
 network_requested=false
+quiet=false
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --model)
@@ -202,6 +210,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --network)
       network_requested=true
+      shift
+      ;;
+    --quiet)
+      quiet=true
       shift
       ;;
     *) usage ;;
@@ -297,4 +309,14 @@ else
 fi
 
 printf 'THREAD_ID: %s\n' "$thread_id"
-cat "$last_message"
+if [[ "$quiet" == true ]]; then
+  # Context-hygiene mode: emit only the parsed verdict block; the full reviewer
+  # message stays in state for on-demand reading during arbitration.
+  script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)
+  if ! "$script_dir/extract-verdict.sh" "$last_message"; then
+    printf '%s\n' '(no trailing verdict line — treat as REVISE; read the full message)' >&2
+  fi
+  printf '\nFULL_MESSAGE: %s\n' "$last_message"
+else
+  cat "$last_message"
+fi
