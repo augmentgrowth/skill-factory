@@ -41,7 +41,7 @@ claude plugin marketplace add augmentgrowth/skill-factory
 claude plugin install skill-factory@skill-factory
 ```
 
-The five factory skills then load in every session, namespaced as `skill-factory:build-skill`, `skill-factory:improve-skill`, and so on. The marketplace is named `skill-factory`, not `augmentgrowth` — hence `skill-factory@skill-factory`.
+The four factory skills then load in every session, namespaced as `skill-factory:build-skill`, `skill-factory:improve-skill`, and so on. The marketplace is named `skill-factory`, not `augmentgrowth` — hence `skill-factory@skill-factory`.
 
 Skills you build via the plugin are committed to whatever git repo you're in — so stand in the repo you want to own the skill before you say "build me a skill." Don't run both paths against the same folder: a clone that's open as a project already auto-loads these skills from `.claude/skills/`, and installing the plugin on top registers a second, namespaced copy of each.
 
