@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skill Factory — The Factory’s First Stress Test</title>
+<style>
+  :root {
+    --bg: #FAF9F5;
+    --surface: #FFFFFF;
+    --surface-2: #F2F0E9;
+    --border: #E3DFD5;
+    --text: #1F1E1D;
+    --muted: #6C6A65;
+    --faint: #8F8C85;
+    --accent: #D97757;
+    --accent-soft: #FBEFE9;
+    --green: #4F7A52;
+    --green-soft: #EDF3ED;
+    --amber: #9A6B2F;
+    --amber-soft: #F8F0E3;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    --sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Helvetica, Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1F1E1D; --surface: #262624; --surface-2: #2E2C2A; --border: #3C3936;
+      --text: #F5F4EF; --muted: #A8A49D; --faint: #8A867F;
+      --accent: #E08A6B; --accent-soft: #3A2A24;
+      --green: #8FBF93; --green-soft: #26302A;
+      --amber: #D4A45F; --amber-soft: #342D22;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #1F1E1D; --surface: #262624; --surface-2: #2E2C2A; --border: #3C3936;
+    --text: #F5F4EF; --muted: #A8A49D; --faint: #8A867F;
+    --accent: #E08A6B; --accent-soft: #3A2A24;
+    --green: #8FBF93; --green-soft: #26302A;
+    --amber: #D4A45F; --amber-soft: #342D22;
+  }
+  :root[data-theme="light"] {
+    --bg: #FAF9F5; --surface: #FFFFFF; --surface-2: #F2F0E9; --border: #E3DFD5;
+    --text: #1F1E1D; --muted: #6C6A65; --faint: #8F8C85;
+    --accent: #D97757; --accent-soft: #FBEFE9;
+    --green: #4F7A52; --green-soft: #EDF3ED;
+    --amber: #9A6B2F; --amber-soft: #F8F0E3;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: var(--sans); line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1160px; margin: 0 auto; padding: 0 24px 80px; }
+  .narrow { max-width: 760px; margin-left: auto; margin-right: auto; }
+  header { padding: 56px 0 8px; }
+  .eyebrow {
+    font-size: 12px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--accent); font-weight: 600; margin-bottom: 14px;
+  }
+  h1 { font-size: clamp(30px, 4.2vw, 44px); line-height: 1.15; margin: 0 0 16px; letter-spacing: -0.02em; }
+  .lede { font-size: 18px; color: var(--muted); margin: 0 0 28px; }
+  .lede strong { color: var(--text); font-weight: 600; }
+  .stats { display: flex; flex-wrap: wrap; gap: 10px; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; min-width: 132px; }
+  .stat .n { font-size: 22px; font-weight: 650; letter-spacing: -0.01em; }
+  .stat .l { font-size: 12px; color: var(--faint); margin-top: 2px; }
+  .toggle { position: fixed; top: 16px; right: 16px; z-index: 10; background: var(--surface); border: 1px solid var(--border); color: var(--muted); border-radius: 8px; padding: 7px 11px; font: inherit; font-size: 12px; cursor: pointer; }
+  .toggle:hover { color: var(--text); }
+  hr.rule { border: 0; border-top: 1px solid var(--border); margin: 44px 0; }
+  h2 { font-size: 24px; margin: 0 0 6px; letter-spacing: -0.01em; }
+  h2 + .sub { color: var(--muted); margin: 0 0 24px; font-size: 15px; }
+  h3 { font-size: 15px; margin: 0 0 7px; }
+  code, .ff { font-family: var(--mono); }
+  code.inline { font-size: .9em; background: var(--surface-2); border: 1px solid var(--border); border-radius: 4px; padding: 1px 4px; }
+  .callout {
+    background: var(--surface); border: 1px solid var(--border);
+    border-left: 3px solid var(--accent); border-radius: 8px;
+    padding: 16px 18px; margin: 22px 0;
+  }
+  .callout.green { border-left-color: var(--green); }
+  .callout p { margin: 0; }
+  .callout p + p { margin-top: 9px; }
+  .seat-grid, .grid2 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .grid2 { grid-template-columns: 1fr 1fr; }
+  @media (max-width: 760px) { .seat-grid, .grid2 { grid-template-columns: 1fr; } }
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px 18px;
+  }
+  .card p { margin: 0; font-size: 14px; color: var(--muted); }
+  .card .role { color: var(--accent); font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 5px; }
+  .timeline { position: relative; margin-top: 6px; }
+  .timeline::before { content: ""; position: absolute; left: 14px; top: 9px; bottom: 12px; width: 1px; background: var(--border); }
+  .stage { position: relative; padding: 0 0 20px 46px; }
+  .stage:last-child { padding-bottom: 0; }
+  .stage .num {
+    position: absolute; left: 0; top: 1px; width: 29px; height: 29px;
+    display: grid; place-items: center; background: var(--accent-soft); color: var(--accent);
+    border: 1px solid var(--border); border-radius: 50%; font-family: var(--mono); font-size: 11px; font-weight: 700;
+  }
+  .stage h3 { margin-bottom: 3px; font-size: 14.5px; }
+  .stage p { margin: 0; color: var(--muted); font-size: 14px; }
+  .commit {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    margin: 9px 0 0; padding: 9px 13px;
+    background: var(--green-soft); border: 1px solid var(--border);
+    border-left: 3px solid var(--green); border-radius: 7px;
+    font-family: var(--mono); font-size: 12px; color: var(--text);
+  }
+  .commit .sha { color: var(--green); font-weight: 600; }
+  .commit .tagpill { margin-left: auto; color: var(--muted); border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; background: var(--surface); }
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 860px) { .compare { grid-template-columns: 1fr; } }
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; display: flex; flex-direction: column; min-width: 0; }
+  .panel-head { padding: 13px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .panel-head .t { font-weight: 650; font-size: 14px; }
+  .panel-head .meta { font-size: 12px; color: var(--faint); font-family: var(--mono); margin-left: auto; }
+  .badge { font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; border-radius: 4px; padding: 2px 7px; }
+  .badge.before { background: var(--surface-2); color: var(--faint); border: 1px solid var(--border); }
+  .badge.after { background: var(--accent-soft); color: var(--accent); }
+  .panel-body { padding: 17px 18px; font-size: 13.5px; }
+  .panel-body p { margin: 0 0 11px; }
+  .panel-body p:last-child { margin-bottom: 0; }
+  .result { display: grid; grid-template-columns: auto 1fr; gap: 7px 11px; margin: 14px 0; font-size: 13px; }
+  .result dt { color: var(--faint); }
+  .result dd { margin: 0; }
+  .miss { background: var(--amber-soft); border: 1px solid var(--border); border-left: 3px solid var(--amber); border-radius: 7px; padding: 11px 12px; color: var(--text); }
+  .caught { background: var(--green-soft); border: 1px solid var(--border); border-left: 3px solid var(--green); border-radius: 7px; padding: 11px 12px; color: var(--text); }
+  .quote {
+    margin: 13px 0; padding: 13px 15px; background: var(--surface-2);
+    border: 1px solid var(--border); border-radius: 8px;
+    font-family: var(--mono); font-size: 12.5px; line-height: 1.55;
+  }
+  .quote .v { display: block; font-weight: 700; color: var(--accent); margin-bottom: 7px; }
+  .quote .ok { color: var(--green); }
+  .caption { color: var(--faint); font-size: 12px; margin-top: 8px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 4px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--faint); font-weight: 650; }
+  td:first-child { width: 29%; color: var(--muted); }
+  td b { color: var(--text); }
+  ul.checks { list-style: none; padding: 0; margin: 8px 0 0; }
+  ul.checks li { padding-left: 24px; position: relative; font-size: 14.5px; margin-bottom: 7px; color: var(--muted); }
+  ul.checks li::before { content: "✓"; position: absolute; left: 4px; color: var(--green); font-weight: 700; }
+  ul.checks li b { color: var(--text); font-weight: 600; }
+  ul.caveats { list-style: none; padding: 0; margin: 8px 0 0; }
+  ul.caveats li { padding: 12px 0 12px 27px; position: relative; color: var(--muted); border-bottom: 1px solid var(--border); }
+  ul.caveats li:last-child { border-bottom: 0; }
+  ul.caveats li::before { content: "!"; position: absolute; left: 4px; top: 13px; width: 16px; height: 16px; display: grid; place-items: center; border-radius: 50%; background: var(--amber-soft); color: var(--amber); font: 700 10px var(--mono); }
+  ul.caveats b { color: var(--text); }
+  pre {
+    margin: 10px 0 0; padding: 14px 16px; overflow-x: auto;
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 8px; font-family: var(--mono); font-size: 12px; line-height: 1.55;
+  }
+  .verdict {
+    background: var(--green-soft); border: 1px solid var(--border); border-radius: 12px;
+    padding: 22px 24px; margin-top: 22px;
+  }
+  .verdict .label { color: var(--green); text-transform: uppercase; letter-spacing: .1em; font-size: 11px; font-weight: 700; }
+  .verdict h3 { font-size: 20px; margin: 6px 0; }
+  .verdict p { margin: 0; color: var(--muted); }
+  footer { color: var(--faint); font-size: 13px; padding-top: 8px; }
+  .ff { font-size: 12px; }
+</style>
+</head>
+<body>
+<button class="toggle" id="tt">◐ theme</button>
+<div class="wrap">
+
+<header class="narrow">
+  <div class="eyebrow">Skill Factory · Demo 3</div>
+  <h1>The factory’s first stress test</h1>
+  <p class="lede">Could Skill Factory v2 build a non-trivial, script-backed workflow skill through its own process — and produce a measurably better result than free-handing? <strong>This run tested exactly that.</strong></p>
+  <div class="stats">
+    <div class="stat"><div class="n">2 arms</div><div class="l">same task · same commit</div></div>
+    <div class="stat"><div class="n">545 green</div><div class="l">tests in both final runs</div></div>
+    <div class="stat"><div class="n">2 catches</div><div class="l">material Sol interventions</div></div>
+    <div class="stat"><div class="n">2 + tag</div><div class="l">birth history</div></div>
+  </div>
+</header>
+
+<hr class="rule">
+
+<div class="narrow">
+  <h2>What the factory was asked to build</h2>
+  <p class="sub">Not a prompt wrapper. A workflow with scripts, state, role separation, and refusal gates.</p>
+  <p><code class="inline">fable-codex</code> is a two-model coding loop. Claude orchestrates and arbitrates. GPT-5.6 Sol adversarially reviews the plan and the code in persistent, read-only Codex threads. GPT-5.6 Luna implements in a separate workspace-write thread. No implementation begins until the plan is approved; no run closes until a fresh reviewer thread approves the code.</p>
+
+  <div class="seat-grid" style="margin-top:20px">
+    <div class="card">
+      <div class="role">Orchestrator</div>
+      <h3>Claude</h3>
+      <p>Investigates, writes or ingests the plan, verifies review claims, reads the full diff, fixes directly, and owns the final answer.</p>
+    </div>
+    <div class="card">
+      <div class="role">Adversarial reviewer</div>
+      <h3>GPT-5.6 Sol</h3>
+      <p>Reviews plans and code in persistent threads, then gives the last gate to a fresh thread with no debate history.</p>
+    </div>
+    <div class="card">
+      <div class="role">Implementer</div>
+      <h3>GPT-5.6 Luna</h3>
+      <p>Executes the approved plan. It does not review, approve, commit, push, or silently broaden scope.</p>
+    </div>
+  </div>
+
+  <div class="callout">
+    <p><b>The test subject was the factory’s own orchestration skill.</b> That made this more demanding than the first two gallery runs: the artifact had executable shell scripts, persistent thread state, sandbox boundaries, verdict parsing, fallback behavior, and exact role prompts.</p>
+  </div>
+</div>
+
+<hr class="rule">
+
+<div class="narrow">
+  <h2>How the factory actually built it</h2>
+  <p class="sub">The order matters. In particular, the baseline existed before the draft.</p>
+
+  <div class="timeline">
+    <div class="stage">
+      <div class="num">0</div>
+      <h3>Preflight</h3>
+      <p>The factory checked repository state and authoring prerequisites. One environmental assumption surfaced here: <code class="inline">shellcheck</code> was absent and had to be installed during the run.</p>
+    </div>
+    <div class="stage">
+      <div class="num">1</div>
+      <h3>Freeze a real guinea-pig task</h3>
+      <p>A real <code class="inline">pm-agent</code> change became the fixture: introduce a validated proposal-kind registry, reject unknown kinds, preserve existing behavior, and leave the suite green. Both arms started from commit <code class="inline">6eec1b8</code> in disposable worktrees.</p>
+    </div>
+    <div class="stage">
+      <div class="num">2</div>
+      <h3>Capture the no-skill baseline before drafting</h3>
+      <p>A single Fable agent implemented the frozen task with no <code class="inline">fable-codex</code> skill and no Codex CLI. It finished with 545 tests green, spent about 117k subagent tokens, and its complete diff was frozen as the bar to beat.</p>
+      <div class="commit"><span class="sha">5256b4f</span><span>fable-codex: birth commit — frozen baseline task + no-skill output</span></div>
+    </div>
+    <div class="stage">
+      <div class="num">3</div>
+      <h3>Classify it correctly</h3>
+      <p>The factory classified <code class="inline">fable-codex</code> as a <b>workflow skill</b>: it orchestrates a multi-stage process and carries internal scripts and references, rather than teaching generic coding knowledge.</p>
+    </div>
+    <div class="stage">
+      <div class="num">4</div>
+      <h3>Draft to the quality bar</h3>
+      <p>Claude authored the orchestration charter and reference prompts. Codex GPT-5.6 Sol implemented the scripts from an exact specification. The script harness passed 14 of 14 stub scenarios and <code class="inline">shellcheck</code>; the finished <code class="inline">SKILL.md</code> is 188 lines.</p>
+    </div>
+    <div class="stage">
+      <div class="num">5</div>
+      <h3>Self-critique before the gate</h3>
+      <p>Five checks covered voice, principles, anti-patterns, examples, and focus. The weakest point was explicit: no worked end-to-end example in <code class="inline">SKILL.md</code>. The run accepted that tradeoff because the reference files carry the exact templates. A malformed code fence was also caught and fixed before testing.</p>
+    </div>
+    <div class="stage">
+      <div class="num">6</div>
+      <h3>Run the literal side-by-side gate</h3>
+      <p>The new skill ran against the same task at the same frozen commit in the second disposable worktree. The question was not “is the skill plausible?” It was “did it beat the already-competent baseline?”</p>
+    </div>
+    <div class="stage">
+      <div class="num">7</div>
+      <h3>Close only after the win</h3>
+      <p>The with-skill arm finished green and received a fresh-thread approval. Only then did the factory record the finished artifact and a per-skill rollback point.</p>
+      <div class="commit"><span class="sha">f99d053</span><span>fable-codex: finished skill</span><span class="tagpill">fable-codex/known-good-1</span></div>
+    </div>
+  </div>
+</div>
+
+<hr class="rule">
+
+<div class="narrow">
+  <h2>The comparison that decided the run</h2>
+  <p class="sub">Same frozen task. Same frozen repository commit. Two disposable worktrees. Both implementations passed 545 tests.</p>
+</div>
+
+<div class="compare">
+  <div class="panel">
+    <div class="panel-head">
+      <span class="badge before">Baseline</span>
+      <span class="t">Fable alone</span>
+      <span class="meta">~117k tokens</span>
+    </div>
+    <div class="panel-body">
+      <p><b>The implementation was competent.</b> It built a central registry, rejected unknown kinds before writes, rewired production call sites to constants, added the requested tests, and left the suite green.</p>
+      <dl class="result">
+        <dt>Final suite</dt><dd>545 passed · 59 subtests · 0 failed</dd>
+        <dt>Tool use</dt><dd>30 calls · about 7.4 minutes</dd>
+        <dt>Review loop</dt><dd>None — implementer judged its own result</dd>
+      </dl>
+      <div class="miss"><b>But it shipped a real regression.</b> <code>DRILLS.md:53</code> still seeded <code>kind='reprioritize'</code>. The new validator rejected that value, so the documented D1 operator drill now failed before it could create a proposal. The green suite did not exercise the runbook example.</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <span class="badge after">With skill</span>
+      <span class="t">Claude + Sol + Luna</span>
+      <span class="meta">~281k orchestrator tokens</span>
+    </div>
+    <div class="panel-body">
+      <p><b>The loop refused to glide past two genuine problems.</b> Sol first forced a plan revision; after Luna implemented and Claude’s own full-diff read found zero defects, Sol found the operator-drill regression that both had missed.</p>
+      <dl class="result">
+        <dt>Final suite</dt><dd>545 passed · 69 subtests</dd>
+        <dt>Plan gate</dt><dd>REVISE → verified correction → APPROVED</dd>
+        <dt>Code gate</dt><dd>CHANGES_REQUIRED → fix + rebuttal → APPROVED</dd>
+        <dt>Final gate</dt><dd>Fresh thread · APPROVED</dd>
+      </dl>
+      <div class="caught"><b>The defect was fixed before close.</b> The drill now uses registered <code>freeform_request</code>. The suite was re-run, the disputed test-gap request was rebutted in <code>IMPLEMENTER_NOTES</code>, and Sol accepted the rebuttal on the resumed thread.</div>
+    </div>
+  </div>
+</div>
+
+<div class="narrow">
+  <div class="callout">
+    <p><b>This is the result, not a slogan:</b> the baseline’s one-model implementation missed the drill regression. In the with-skill arm, Luna missed it and the orchestrator’s own diff read missed it too. Sol caught it. Two-model review found what one model missed twice.</p>
+  </div>
+</div>
+
+<hr class="rule">
+
+<div class="narrow">
+  <h2>The raw gates</h2>
+  <p class="sub">These are excerpts from the recorded verdict stream, not reconstructed dialogue.</p>
+
+  <h3>1 · Plan review, round one</h3>
+  <div class="quote">
+    <span class="v">VERDICT: REVISE</span>
+    BLOCKERS: &quot;Test fallout is undercounted: tests/test_standup.py:54-60 forwards a dynamic kind into ProposalStore.create(), and that file passes 'reprioritize' at 30 call sites, not one... replacements also risk changing behavior: tests/test_standup.py:195 expects the generic fallback category 'standup', while triage_propose/triage_recategorize map to specific categories in pm_agent/standup.py:450-476. Correct the fallout inventory... specify semantics-preserving replacements — such as freeform_request for generic fallback tests.&quot;
+  </div>
+  <p class="caption">The orchestrator checked the helper, confirmed 30 occurrences, verified the fallback semantics, rewrote the plan, and resumed the same thread. Round two: <code>VERDICT: APPROVED</code>.</p>
+
+  <h3 style="margin-top:24px">2 · Code review, round one</h3>
+  <div class="quote">
+    <span class="v">VERDICT: CHANGES_REQUIRED</span>
+    FINDINGS: &quot;[P2] pm-agent/DRILLS.md:53 — The new validator rejects kind='reprioritize', so documented drill D1 raises ProposalError before creating a proposal. Replace it with registered freeform_request and verify the seed command.&quot;<br><br>
+    TEST_GAPS: &quot;The green pytest suite does not validate proposal-kind examples in DRILLS.md, allowing this regression to pass.&quot;
+  </div>
+  <p class="caption">The finding was verified and fixed directly. The proposed documentation-test infrastructure was rebutted as disproportionate for this operator runbook; Sol accepted that distinction. Round two: <code>VERDICT: APPROVED</code>, findings none, test gaps none.</p>
+
+  <h3 style="margin-top:24px">3 · Independent final gate</h3>
+  <div class="quote">
+    <span class="v ok">FINDINGS: None</span>
+    TEST_GAPS: None<br>
+    VERDICT: APPROVED
+  </div>
+  <p class="caption">A fresh Sol thread received the task, approved plan, diff, and test evidence with no access to the prior debate.</p>
+</div>
+
+<hr class="rule">
+
+<div class="narrow">
+  <h2>Did the factory perform as designed?</h2>
+  <p class="sub">The answer is yes, for specific and inspectable reasons.</p>
+
+  <table>
+    <tr><th>Factory promise</th><th>What happened in this run</th></tr>
+    <tr><td>Baseline first</td><td><b>The comparison stayed literal.</b> The no-skill output and full diff were frozen in commit <code>5256b4f</code> before <code>SKILL.md</code> existed.</td></tr>
+    <tr><td>Stable fixture</td><td><b>A live coding task became a benchmark.</b> Task, invocation context, and repository commit <code>6eec1b8</code> were fixed for both arms.</td></tr>
+    <tr><td>Gates that refuse to close</td><td><b>REVISE and CHANGES_REQUIRED meant stop.</b> The plan changed before implementation; the code changed before final approval.</td></tr>
+    <tr><td>Silent, path-scoped history</td><td><b>Exactly two skill commits and one rollback tag.</b> The checkable sequence is <code>5256b4f → f99d053</code>, tagged <code>fable-codex/known-good-1</code>.</td></tr>
+    <tr><td>Trigger-shaped description</td><td><b>The frontmatter says when to load and when not to.</b> Literal triggers include implement, build, refactor, fix, code review, plan review, Sol, Luna, and two-model verification.</td></tr>
+    <tr><td>Sub-500-line skill</td><td><b>188 lines.</b> Exact prompts and fallback policy live one reference level deep instead of bloating the entrypoint.</td></tr>
+    <tr><td>Degrees match fragility</td><td><b>Prose where judgment is required; scripts where exactness matters.</b> The charter explains arbitration, while shell scripts enforce thread identity, sandboxes, verdict extraction, and secret checks.</td></tr>
+    <tr><td>Gotchas at birth</td><td><b>Present on day one.</b> It records no-network install failures and the risk that committed changes are invisible to <code>git diff HEAD</code>.</td></tr>
+  </table>
+
+  <div class="verdict">
+    <div class="label">Evaluation verdict</div>
+    <h3>Skill Factory v2 performed as designed.</h3>
+    <p>On its first script-backed workflow skill, baseline-first evidence, frozen fixtures, and refusal gates demonstrably changed the outcome versus free-handing: the gate caught and removed a regression that the competent baseline shipped.</p>
+  </div>
+</div>
+
+<hr class="rule">
+
+<div class="narrow">
+  <h2>The caveats, without sanding them down</h2>
+  <p class="sub">A successful stress test is not the same thing as a universal proof.</p>
+
+  <ul class="caveats">
+    <li><b>The builder also occupied the operator seats.</b> Picking the guinea-pig task and judging the side-by-side are intended as builder-judges steps. This run was autonomous, so those judgments are recorded for an operator to overrule; they are not independent human validation.</li>
+    <li><b>The with-skill arm cost more at this size:</b> about 281k orchestrator tokens versus about 117k for the baseline. The loop paid in quality and vendor diversity here, not token savings. Its economics improve only on larger, labor-heavy tasks; the skill’s applicability test is the guard against using it on trivial work.</li>
+    <li><b>The build machine did not have <code>shellcheck</code>.</b> It was installed mid-run. The factory’s verification contract assumed the tool existed, so the environment had to be repaired before the promised check could pass.</li>
+    <li><b>The authoring process itself produced one bug.</b> A malformed code fence in <code>SKILL.md</code> was caught and fixed before the side-by-side gate. It did not escape, but it is still evidence that the draft was not clean on first write.</li>
+    <li><b>The baseline was not bad.</b> It passed the entire suite and produced a defensible implementation. The result supports the narrower claim that adversarial review improved this task’s outcome — not that every two-model run will.</li>
+  </ul>
+</div>
+
+<hr class="rule">
+
+<div class="narrow">
+  <h2>Audit it yourself</h2>
+  <p class="sub">The page is the argument. These files are the receipts.</p>
+
+  <pre>demos/artifacts/fable-codex-factory-run/
+├── task.md                 frozen task
+├── plan.md                 revised plan Sol approved
+├── loop-transcript.md      stages, verdicts, arbitration, thread state
+├── plan-review-r1.txt      exact round-one plan-review prompt
+├── code-review-r1.txt      exact round-one code-review prompt
+├── final-verdict.txt       exact fresh-thread review prompt
+├── withskill.diff          accepted implementation diff
+└── git-history.txt         5256b4f → f99d053 + known-good tag
+
+.claude/skills/fable-codex/
+├── SKILL.md                188-line orchestration charter
+├── CHANGELOG.md            birth + completion receipts
+└── cases/baseline/
+    ├── input.md            same task, frozen at 6eec1b8
+    └── output-baseline.md  no-skill result + full captured diff</pre>
+
+  <div class="callout green">
+    <p><b>The discipline changed the outcome.</b> Baseline-first prevented a strawman. The fixture made the comparison repeatable. The plan gate corrected a real undercount. The code gate caught a real regression after two other seats missed it. The fresh-thread gate refused to let the reviewing conversation approve itself.</p>
+  </div>
+</div>
+
+<hr class="rule">
+
+<footer class="narrow">
+  <p class="ff">Real factory run, 2026-07-15. Both arms used the identical frozen pm-agent task at commit 6eec1b8 in disposable worktrees. Verdict excerpts are reproduced from demos/artifacts/fable-codex-factory-run/loop-transcript.md; code and plan prompts, accepted diff, baseline diff, thread state, tests, commits, and tag are preserved alongside it. No external assets or runtime dependencies.</p>
+</footer>
+
+</div>
+<script>
+  (function () {
+    var b = document.getElementById('tt');
+    b.addEventListener('click', function () {
+      var cur = document.documentElement.getAttribute('data-theme');
+      if (!cur) cur = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', cur === 'dark' ? 'light' : 'dark');
+    });
+  })();
+</script>
+</body>
+</html>
