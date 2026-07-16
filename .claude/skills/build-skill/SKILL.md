@@ -51,9 +51,12 @@ Three paths. Honor an explicit choice; otherwise infer from how the builder talk
 
 The baseline is captured first so the final side-by-side is literal. Do not draft yet.
 
-1. Create the new skill's folder at `.claude/skills/<name>/` — the same tree as the
-   factory skills, deliberately: it auto-loads for the with-skill test and is
-   git-tracked from birth.
+1. Create the new skill's folder at `.claude/skills/<name>/` **in the build home** — the
+   git repo the builder is standing in (in a cloned factory, that's the clone itself; see
+   the spec's "Where skills are born"). It is git-tracked from birth and, on Claude Code,
+   auto-loads for the with-skill test. Never create it inside a plugin's managed cache;
+   if the current directory isn't a git repo, ask where the builder's skills live before
+   falling back to degraded no-git mode.
 2. Freeze a sample input. For live-data workflows (paid-media reports and the like),
    use a **pasted representative sample export** — never a live API pull, and no
    credentials in the guided flow. Monday's data isn't Tuesday's; a captured sample is
@@ -118,8 +121,9 @@ baseline vs with-skill. **The builder judges.**
    `CHANGELOG.md`, and `.env.example` if present, but **NEVER** the real `.env` — to the
    harness's personal skills directory (Claude Code: `~/.claude/skills/<name>/`; other
    harnesses per the spec's Harness notes matrix in `CLAUDE.md`).
-3. Tell the builder the **factory repo remains the skill's system of record** — that's
+3. Tell the builder the **build home remains the skill's system of record** — that's
    where its history lives and where to come back to improve it (via `improve-skill`).
+   There is no later migration step.
 
 ## Gotchas
 

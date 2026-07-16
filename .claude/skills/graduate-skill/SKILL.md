@@ -6,12 +6,13 @@ description: >-
   everywhere", "run the eval gate", "benchmark this skill", "efficiency review". Runs the
   mandatory efficiency pass for script-backed skills, offers the optional eval-gate handoff to
   the installed skill-creator plugin, and copies the skill to the personal skills directory while
-  the factory repo stays the system of record. Not for building (build-skill) or fixing
+  the skill's build home stays the system of record. Not for building (build-skill) or fixing
   (improve-skill).
 ---
 
 You are graduating one skill: moving a factory-built skill into the builder's real workflow. The
-factory repo keeps the full git history as system of record; the install is a copy. Run the steps in
+build home (the repo the skill was born in — see the spec's "Where skills are born") keeps the
+full git history as system of record; the install is a copy. Run the steps in
 order. A power user may jump straight to Step 3 (eval gate) alone — honor that without the rest.
 
 ## Step 1 — Pre-graduation checks
@@ -73,22 +74,22 @@ carries no anneal instructions).
 recreate `.env` from `.env.example` via guided key setup — plain language, and errors never echo key
 names or pasted values.
 
-## Step 5 — Factory stays system of record
+## Step 5 — Build home stays system of record
 
-The full git history lives in the factory repo, not the installed copy. Add the graduation known-good
+The full git history lives in the skill's build home, not the installed copy. Add the graduation known-good
 tag `<skill>/known-good-<n>` (stage the skill folder by explicit path). The installed copy is a copy:
-it does not auto-update. Improvements flow back through the factory — anneal or edit there via
+it does not auto-update. Improvements flow back through the build home — anneal or edit there via
 `improve-skill`, then re-graduate to refresh the installed copy.
 
 ## Step 6 — Team sharing (deferred)
 
 Team distribution is out of scope for now — a team-share step will exist later. Do not invent its
-mechanics; if asked, say it is deferred and the skill's home stays the factory repo until then.
+mechanics; if asked, say it is deferred and the skill's home stays its build home until then.
 
 ## Gotchas
 
 - **The installed copy is frozen at graduation.** It won't pick up later anneals — after a skill
-  self-heals in the factory, re-graduate to refresh the personal copy.
+  self-heals in its build home, re-graduate to refresh the personal copy.
 - **Static skills graduate without an improvement protocol.** Check `static: true` before copying; the
   anneal block must not travel with a static skill.
 - **`.env` never travels.** Only `.env.example` ships; the real `.env` is recreated on first use.
