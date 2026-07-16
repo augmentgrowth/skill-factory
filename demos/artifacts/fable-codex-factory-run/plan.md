@@ -1,0 +1,46 @@
+# Plan — validated registry of proposal kinds (deliverable: proposal-kinds)
+
+## Goal
+Introduce `VALID_PROPOSAL_KINDS` in `pm_agent/proposals.py`, validate `kind` in `ProposalStore.create()`, keep call sites consistent with the smallest complete change, add tests, leave the suite fully green.
+
+## Kind inventory (verified by inspection)
+Production call sites of `ProposalStore.create`:
+- `pm_agent/triage.py:778` — `kind=f"triage_{result.decision}"`. Reachable decisions at this branch: `propose` (always), plus `close`, `decay_archive`, `recategorize` when tier is `propose_first` (`no_action` and `file_label` exit earlier in the loop). Produces: `triage_propose`, `triage_close`, `triage_decay_archive`, `triage_recategorize`.
+- `pm_agent/triage.py:824` — `triage_recategorize` (explicit)
+- `pm_agent/triage.py:844` — `triage_file_label` (explicit)
+- `pm_agent/anneal.py:831` — `tier_graduation`
+- `pm_agent/capture.py:379/440/527` — `capture_which_team`, `capture_file`, `capture_maybe`
+- `pm_agent/replies.py:662` — `freeform_request`
+
+Registry (10 kinds): `triage_close`, `triage_propose`, `triage_decay_archive`, `triage_recategorize`, `triage_file_label`, `tier_graduation`, `capture_which_team`, `capture_file`, `capture_maybe`, `freeform_request`.
+
+These names are already the exact keys consumed downstream (`anneal.py:333-338` `_TRIAGE_DECISION_TO_POOL`, `standup.py:450-456` `_TRIAGE_KIND_TO_CATEGORY`, `standup.py:89` `KIND_TIER_GRADUATION`, `daily_push.py:197`/`standup.py:91` `_ADMIN_HYGIENE_KINDS`, `replies.py:480` `CAPTURE_FILE_KIND`), so the registry codifies the existing contract.
+
+## Changes
+1. **`pm_agent/proposals.py`**
+   - Add `VALID_PROPOSAL_KINDS` as a module-level tuple (mirrors the existing `STATES` tuple style), with a short comment naming each kind's creator module, and a docstring note that new kinds must be registered here.
+   - In `create()`, validate first (before the lock — pure membership check, no I/O):
+     `if kind not in VALID_PROPOSAL_KINDS: raise ProposalError(f"invalid proposal kind: {kind!r}; valid kinds: {', '.join(VALID_PROPOSAL_KINDS)}")`
+     This mirrors the repo's existing convention in `transition()`: `raise ProposalError(f"invalid target state: {new_state!r}")` (ProposalError subclasses ValueError; message names the bad value and the fix).
+2. **Call sites** — deliberately unchanged (smallest complete change): creation-side literals are now checked at the single chokepoint, so a typo or unregistered new kind fails loudly at creation; introducing 10 per-kind constants and rewiring 8 modules adds churn without new safety. Existing consumer-side constants (`CAPTURE_FILE_KIND`, `KIND_TIER_GRADUATION`, the category maps) stay as-is — they are consumer mappings, not creation strings.
+3. **Tests** (`tests/test_proposals.py`)
+   - New: `create()` with an unknown kind raises `ProposalError` whose message names the offending kind and the valid set.
+   - New: `create()` accepts every kind in `VALID_PROPOSAL_KINDS` (loop/subTest over the registry; assert the proposal lands `open` with the kind intact — existing behavior unchanged).
+   - Fix fallout: existing tests create proposals through `ProposalStore.create` with unregistered ad-hoc kinds, both directly AND via helpers that forward a dynamic `kind` (e.g. `tests/test_standup.py:54-60` `_create()`, through which `"reprioritize"` flows at ~30 call sites in that file alone). Full inventory must be built by grepping each test file for the offending literals — `relabel`, `reprioritize`, `recategorize`, `stale_check` — across `test_replies.py`, `test_anneal.py`, `test_daily_push.py`, `test_proposals.py`, `test_injection_suite.py`, `test_cli_reply.py`, `test_standup.py`, counting helper-mediated uses, then re-running the suite to catch any remaining.
+   - Replacement rule (semantics-preserving): pick the registered kind that lands in the SAME classification bucket the test exercises:
+     - Tests relying on the generic "rest bucket" ordering and/or the generic fallback category `"standup"` (e.g. `tests/test_standup.py:195` asserts `entry["category"] == "standup"`) → `freeform_request` (not admin-hygiene, not decay-adjacent, not in the triage kind→category maps, falls through to the `CATEGORY` fallback in `standup._proposal_override_category` and to `kind` fallback in anneal).
+     - Tests exercising decay-adjacent behavior keep/use `triage_decay_archive`/`triage_close`; admin-hygiene tests keep/use `triage_file_label`/`capture_maybe`/`capture_which_team`; `recategorize` → `triage_recategorize` only where a triage category is expected.
+     After replacement, verify each touched assertion still tests the same branch (bucket boost, category attribution, admin filtering).
+   - `overrides.append(kind=...)` values (`ratification`, `reject_close`, `undo_of_ledgered_action`) are a different namespace — untouched.
+
+## Validation
+- `python3 -m pytest tests/ -q` from `pm-agent/` — full suite green (baseline: 543 passed, 59 subtests).
+- Focused: `python3 -m pytest tests/test_proposals.py -q`.
+
+## Non-goals
+- No validation of `ReplyResult.kind`, `overrides.append(kind=...)`, or ledger `detail={"kind": ...}` values — separate namespaces.
+- No dynamic/pluggable kind registration; no state-machine changes; no commit/push.
+
+## Risks
+- Test kind replacements could silently change a test's meaning where behavior branches on kind classification — mitigated by checking each replacement against the classification sets/maps above.
+- The f-string creation site in triage means a future new decision value fails at runtime rather than import time — that is the intended failure mode (loud, actionable) and is covered by the error message.

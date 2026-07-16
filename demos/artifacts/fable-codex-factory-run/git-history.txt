@@ -1,0 +1,2 @@
+f99d053 (HEAD -> feat/fable-codex, tag: fable-codex/known-good-1) fable-codex: finished skill — orchestration charter, codex thread scripts, role prompts, fallback charter
+5256b4f fable-codex: birth commit — frozen baseline task + no-skill output
