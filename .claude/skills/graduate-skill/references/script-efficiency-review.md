@@ -1,8 +1,13 @@
 # Script efficiency review
 
-Run this checklist **inline** against every script in a script-backed skill at graduation. It is not
-a standing sub-agent — you read it and apply it in the current session. Mindset: assume every API
-call costs money and every unhandled error will happen at real scale.
+This checklist runs at three points in a script's life: **write time** (build-skill Step 5, on any
+new or changed script), **anneal time** (improve-skill Step 5, on the changed script only), and
+**graduation** (this skill's mandatory gate). At write and anneal time it is dispatched to a fresh,
+disposable sub-agent — the pass reads whole scripts and reports only findings, the context-isolation
+case sub-agents exist for. At graduation, run it inline. Either way there is no standing named
+optimizer agent to maintain; the checklist is the single source and the sub-agent ends with the
+task. Mindset: assume every API call costs money and every unhandled error will happen at real
+scale.
 
 Read each script end to end, then walk the six dimensions below. Emit one finding per issue, each
 severity-ranked. A finding is only useful if it names all four parts:
