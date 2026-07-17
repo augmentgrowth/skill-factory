@@ -51,7 +51,7 @@ Target repo: /private/tmp/.../scratchpad/pm-withskill (pm-agent/ subdir). Delive
 
 ## Thread state (`codex-thread.sh ... show`)
 ### reviewer show proposal-kinds
-repo-slug: private-tmp-claude-501--Users-malachirose-Vaults-second-brain-02-Areas-SKILL-FACTORY-ff73362d-ba8a-47f0-82a4-a08c9a7e174f-scratchpad-pm-withskill
+repo-slug: scratch-workspace-pm-withskill
 deliverable: proposal-kinds
 reviewer.thread_id: 019f688d-9e16-70f1-828f-d7facd88efff
 reviewer.fresh.thread_id: none
@@ -61,7 +61,7 @@ last invocations:
 2026-07-16T01:39:33Z	role=implementer	subcommand=start	model=gpt-5.6-luna	sandbox=workspace-write	network=false
 
 ### reviewer show proposal-kinds-code
-repo-slug: private-tmp-claude-501--Users-malachirose-Vaults-second-brain-02-Areas-SKILL-FACTORY-ff73362d-ba8a-47f0-82a4-a08c9a7e174f-scratchpad-pm-withskill
+repo-slug: scratch-workspace-pm-withskill
 deliverable: proposal-kinds-code
 reviewer.thread_id: 019f689c-c6a4-7bb3-a986-20a19a228c9f
 reviewer.fresh.thread_id: 019f68ad-b6ff-7480-b54f-e11d5570ff35
@@ -71,7 +71,7 @@ last invocations:
 2026-07-16T02:07:22Z	role=reviewer	subcommand=fresh	model=gpt-5.6-sol	sandbox=read-only	network=false
 
 ### implementer show proposal-kinds
-repo-slug: private-tmp-claude-501--Users-malachirose-Vaults-second-brain-02-Areas-SKILL-FACTORY-ff73362d-ba8a-47f0-82a4-a08c9a7e174f-scratchpad-pm-withskill
+repo-slug: scratch-workspace-pm-withskill
 deliverable: proposal-kinds
 implementer.thread_id: 019f6894-3eca-7623-9ad6-e545ca74df68
 implementer.fresh.thread_id: none

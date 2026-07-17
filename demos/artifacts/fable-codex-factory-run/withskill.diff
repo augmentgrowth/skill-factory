@@ -2,7 +2,7 @@ diff --git a/pm-agent/DRILLS.md b/pm-agent/DRILLS.md
 index 377fe47..e3961da 100644
 --- a/pm-agent/DRILLS.md
 +++ b/pm-agent/DRILLS.md
-@@ -50,7 +50,7 @@ cd /Users/malachirose/code/agents-worktrees/pm-agent/pm-agent
+@@ -50,7 +50,7 @@ cd /Users/demo/code/agents-worktrees/pm-agent/pm-agent
  python3 -c "
  from pm_agent.proposals import ProposalStore
  p = ProposalStore('pm-agent/state/proposals.json')

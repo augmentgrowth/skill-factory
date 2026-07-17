@@ -2,7 +2,7 @@
 
 ## Invocation context
 
-- **Guinea-pig repo:** `/Users/malachirose/code/agents` (the pm-agent lives in `pm-agent/`)
+- **Guinea-pig repo:** `/Users/demo/code/agents` (the pm-agent lives in `pm-agent/`)
 - **Frozen pre-task commit:** `6eec1b8506faea64ba501f7768863924ba466ce1` (branch `feat/pm-agent-capture-reenable`)
 - **Run protocol (KTD9):** each benchmark pass runs in a disposable git worktree cut from the frozen commit (`git worktree add <tmp> 6eec1b8...`), and the worktree is discarded after the diff + summary are captured. The repo itself is never mutated.
 - **Baseline pass:** Claude Fable only — no fable-codex skill, no codex CLI, no Sol/Luna.
