@@ -34,9 +34,20 @@ not "I committed the fixture"). Git words are for this file, never for the build
 Read the failing skill's `SKILL.md` frontmatter — reading straight through the serving path is
 fine, links read through. If `static: true`, this skill never self-edits: diagnose the failure,
 write the builder a plain-language **fix proposal** (what failed, why, the exact edit you would
-make), and STOP. No commits to the skill body, no annealing. (If the case was already captured —
-you got here from the queue — write the terminal marker from Step 7 so the proposal is not
-re-raised on every sweep.) Absent flag = annealing on; continue.
+make), and STOP. No commits to the skill body, no annealing.
+
+Where the proposal and case live depends on the tier:
+
+- **Vendored/external skill** (lives in a `vendor/` tree, tracks an upstream copy): write NOTHING
+  into the skill's folder — a case dir there reads as drift from upstream and turns the repo's
+  health check red. Put the proposal (plus any repro material) somewhere builder-visible outside
+  the vendor tree; these skills never enter the anneal queue.
+- **Personal-tier skill carrying `static: true`:** if a case was already captured — you got here
+  from the queue — write the terminal marker from Step 7 and commit it alone
+  (`Mark case terminal for <skill>: <slug> (static — proposal written)`) so the proposal is not
+  re-raised on every sweep.
+
+Absent flag = annealing on; continue.
 
 ## Step 2 — Preflight
 
@@ -139,8 +150,9 @@ summary. Done.
 If the loop exhausts, or at any point you are unsure the fix is correct or it would reach outside
 the folder:
 
-1. **Path-scoped restore** the skill folder to its last good state — prefer the latest
-   `<skill>/known-good-<n>` tag if the recent commits are suspect, else the last good commit:
+1. **Path-scoped restore** the skill folder to its last good state — the last good commit, or the
+   latest `<skill>/known-good-<n>` tag when one exists and the recent commits are suspect (a skill
+   born in a hub build home may never have been tagged; the commit path is the normal case):
    `git -C <repo> checkout <ref> -- <skill-folder>` (or
    `git -C <repo> restore --source=<ref> -- <skill-folder>`). Folder only. **Repo HEAD never
    moves**, and the Step 3 case commit stays intact — a path-scoped restore rewrites only files the
@@ -158,13 +170,15 @@ the folder:
 One skill anneals at a time. The lock belongs to whoever is annealing — **the capturing session
 never takes it.**
 
-1. **Acquire** `<repo>/.anneal/locks/<skill>` by atomic create (fail if it already exists). Content:
-   the holder's process id and an ISO-8601 start timestamp, one line.
-2. **Already held by a live holder** (its pid is a running process and its timestamp is under two
-   hours old) → **exit quietly.** Do not wait, do not double-anneal. The case stays queued and the
-   holder or a later sweep handles it.
-3. **Stale** — the recorded pid is dead, or the timestamp is more than two hours old → reclaim it:
-   overwrite with your own pid and timestamp, and continue.
+1. **Acquire** `<repo>/.anneal/locks/<skill>` by atomic create (fail if it already exists). Content,
+   two lines exactly (this is the format the repo's audit tooling parses — do not improvise):
+   `pid: <n>` then `started: <ISO-8601 timestamp>`.
+2. **Already held by a live holder** (its pid is a running process and its recorded `started:` is
+   under two hours old) → **exit quietly.** Do not wait, do not double-anneal. The case stays
+   queued and the holder or a later sweep handles it.
+3. **Stale** — the recorded pid is dead, or the recorded `started:` is more than two hours old →
+   reclaim it: overwrite with your own pid and timestamp, and continue. (Audit tooling may also use
+   the lock file's age as a fallback signal when the `started:` line is missing or unparseable.)
 4. **Release** — delete the lock file — at *every* exit: green, exhausted, aborted preflight, or
    error. A lock outliving its run is the one failure mode that stalls a whole skill.
 5. Locks are runtime state, never committed. The home repo ignores `.anneal/locks/`; if it does not
@@ -179,7 +193,8 @@ anneal queue", or just noticing a backlog.
   file**. `cases/baseline/` is never a queue entry, and neither is anything undated.
 - For each entry, oldest first: run Step 1 (static check), Step 2 (resolve + scoped preflight —
   this is a background-style run, so abort-and-requeue rather than ask), take the lock, then Steps
-  5-7. Skip the capture step — the case already exists.
+  5-7. Skip the capture step — the case already exists — and Step 4 is moot: you are already the
+  annealing agent, so there is no dispatch decision to make.
 - **One skill at a time.** Anything whose lock is held by a live holder is skipped silently and
   stays queued.
 - Report at the end in plain language: how many failures were waiting, which are fixed, which still
