@@ -1,0 +1,812 @@
+#!/usr/bin/env python3
+"""skills — master map and link surgery for the skill hub.
+
+Stdlib only, on purpose: this script ships generically as the factory's client
+template, so it must run anywhere python3 does with nothing installed.
+
+Layout it assumes (all relative to the hub repo root):
+
+    .claude/skills/<name>/      personal tier — canonical, git-tracked
+    vendor/skills/<name>/       external tier — vendored copies, static
+    scopes/hermes/<name>        hub-side link farm Hermes reads via external_dirs
+    docs/topology/scopes.txt    registry of scope dirs that bound the scan
+    .anneal/locks/<skill>       per-skill anneal locks (gitignored)
+
+Subcommands:
+
+    status [--json]                     master map: skill, tier, canonical, links
+    doctor [--json]                     broken-link + drift audit (warnings don't fail)
+    link <skill> --scope <s>            place per-skill symlinks
+    unlink <skill> --scope <s>          remove them
+    enable <skill> [--scope <s>]        re-link, or suggest how
+    disable <skill>                     remove every link, keep canonical content
+    vendor --refresh <skill>            re-copy an external skill from its upstream
+
+A scope is `global` (~/.claude/skills + ~/.codex/skills), `hermes` (the hub-side
+farm), or a directory path (<dir>/.claude/skills + <dir>/.agents/skills).
+
+Every location this tool reads is overridable by environment variable so tests —
+and other machines — never have to touch the real harness roots:
+
+    SKILLS_HUB_ROOT, SKILLS_CLAUDE_ROOT, SKILLS_CODEX_ROOT,
+    SKILLS_HERMES_ROOT, SKILLS_HERMES_CONFIG, SKILLS_VAULT_ROOT
+"""
+
+import argparse
+import filecmp
+import json
+import os
+import re
+import shutil
+import sys
+import time
+from pathlib import Path
+
+DATED_CASE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}-")
+VENDOR_KEYS = ("static", "tier", "upstream")
+LOCK_TTL_SECONDS = 2 * 60 * 60
+RESERVED_CASE_DIRS = {"baseline", "experiments"}
+
+
+# --------------------------------------------------------------------------
+# configuration
+# --------------------------------------------------------------------------
+
+
+def env_path(name, default):
+    raw = os.environ.get(name)
+    if raw:
+        return Path(os.path.expanduser(raw)).resolve()
+    return Path(default).expanduser()
+
+
+class Config:
+    def __init__(self, root=None):
+        if root:
+            self.hub = Path(root).expanduser().resolve()
+        else:
+            self.hub = env_path(
+                "SKILLS_HUB_ROOT", Path(__file__).resolve().parent.parent
+            )
+        home = Path.home()
+        self.claude_root = env_path("SKILLS_CLAUDE_ROOT", home / ".claude" / "skills")
+        self.codex_root = env_path("SKILLS_CODEX_ROOT", home / ".codex" / "skills")
+        self.hermes_root = env_path("SKILLS_HERMES_ROOT", home / ".hermes" / "skills")
+        self.hermes_config = env_path(
+            "SKILLS_HERMES_CONFIG", home / ".hermes" / "config.yaml"
+        )
+        self.vault_root = env_path(
+            "SKILLS_VAULT_ROOT", home / "vault"
+        )
+
+    @property
+    def personal_dir(self):
+        return self.hub / ".claude" / "skills"
+
+    @property
+    def external_dir(self):
+        return self.hub / "vendor" / "skills"
+
+    @property
+    def hermes_farm(self):
+        return self.hub / "scopes" / "hermes"
+
+    @property
+    def registry(self):
+        return self.hub / "docs" / "topology" / "scopes.txt"
+
+    @property
+    def lock_dir(self):
+        return self.hub / ".anneal" / "locks"
+
+
+# --------------------------------------------------------------------------
+# skill discovery
+# --------------------------------------------------------------------------
+
+
+class Skill:
+    def __init__(self, name, tier, path):
+        self.name = name
+        self.tier = tier
+        self.path = path
+
+    @property
+    def real(self):
+        return os.path.realpath(str(self.path))
+
+
+def discover_skills(cfg):
+    found = {}
+    for tier, base in (("personal", cfg.personal_dir), ("external", cfg.external_dir)):
+        if not base.is_dir():
+            continue
+        for entry in sorted(base.iterdir()):
+            if entry.name.startswith("."):
+                continue
+            if not entry.is_dir():
+                continue
+            found[entry.name] = Skill(entry.name, tier, entry)
+    return found
+
+
+def resolve_skill(cfg, name):
+    skills = discover_skills(cfg)
+    if name not in skills:
+        raise SystemExit(
+            "unknown skill: %s\nlooked in %s and %s"
+            % (name, cfg.personal_dir, cfg.external_dir)
+        )
+    return skills[name]
+
+
+# --------------------------------------------------------------------------
+# scope registry
+# --------------------------------------------------------------------------
+
+
+REGISTRY_HEADER = (
+    "# Scope registry — one scope per line.\n"
+    "# `bin/skills link` appends every scope it writes to; nothing is ever removed\n"
+    "# on unlink (the filesystem is authoritative for whether a link exists; this\n"
+    "# file only bounds where status/doctor look). Tokens: global | hermes | <dir>\n"
+)
+
+
+def read_registry(cfg):
+    if not cfg.registry.exists():
+        return []
+    out = []
+    for line in cfg.registry.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line not in out:
+            out.append(line)
+    return out
+
+
+def append_registry(cfg, entry):
+    existing = read_registry(cfg)
+    if entry in existing:
+        return False
+    cfg.registry.parent.mkdir(parents=True, exist_ok=True)
+    if not cfg.registry.exists():
+        cfg.registry.write_text(REGISTRY_HEADER)
+    text = cfg.registry.read_text()
+    if text and not text.endswith("\n"):
+        text += "\n"
+    cfg.registry.write_text(text + entry + "\n")
+    return True
+
+
+# --------------------------------------------------------------------------
+# hermes config (narrow line-oriented parse of skills.external_dirs only)
+# --------------------------------------------------------------------------
+
+
+def hermes_external_dirs(cfg):
+    path = cfg.hermes_config
+    if not path.exists():
+        return []
+    try:
+        lines = path.read_text().splitlines()
+    except OSError:
+        return []
+
+    in_skills = False
+    for index, raw in enumerate(lines):
+        if raw.strip() and not raw[0].isspace():
+            in_skills = raw.split("#", 1)[0].strip() == "skills:"
+            continue
+        if not in_skills:
+            continue
+        stripped = raw.strip()
+        if not stripped.startswith("external_dirs:"):
+            continue
+        rest = stripped[len("external_dirs:") :].strip()
+        if rest.startswith("["):
+            inner = rest[1 : rest.rfind("]")] if "]" in rest else rest[1:]
+            return [_clean_scalar(x) for x in inner.split(",") if x.strip()]
+        indent = len(raw) - len(raw.lstrip())
+        out = []
+        for follow in lines[index + 1 :]:
+            if not follow.strip():
+                continue
+            follow_indent = len(follow) - len(follow.lstrip())
+            if follow_indent <= indent:
+                break
+            item = follow.strip()
+            if not item.startswith("- "):
+                break
+            out.append(_clean_scalar(item[2:]))
+        return out
+    return []
+
+
+def _clean_scalar(text):
+    text = text.split(" #", 1)[0].strip()
+    return text.strip("'\"")
+
+
+# --------------------------------------------------------------------------
+# scan roots + link inventory
+# --------------------------------------------------------------------------
+
+
+def scan_roots(cfg):
+    """Directories that may contain per-skill links, each tagged with its scope."""
+    roots = []
+    seen = set()
+
+    def add(path, scope):
+        p = Path(os.path.expanduser(str(path)))
+        key = os.path.normpath(str(p))
+        if key in seen:
+            return
+        seen.add(key)
+        roots.append((p, scope))
+
+    add(cfg.claude_root, "global")
+    add(cfg.codex_root, "global")
+    add(cfg.hermes_root, "hermes-root")
+    add(cfg.hermes_farm, "hermes")
+    for d in hermes_external_dirs(cfg):
+        add(d, "hermes:external_dirs")
+    for entry in read_registry(cfg):
+        if entry in ("global", "hermes"):
+            continue
+        base = Path(os.path.expanduser(entry))
+        add(base / ".claude" / "skills", entry)
+        add(base / ".agents" / "skills", entry)
+    return roots
+
+
+class LinkRecord:
+    def __init__(self, path, scope, target, real, status):
+        self.path = path
+        self.scope = scope
+        self.target = target
+        self.real = real
+        self.status = status
+
+    def as_dict(self):
+        return {
+            "path": str(self.path),
+            "scope": self.scope,
+            "target": self.target,
+            "resolves_to": self.real,
+            "status": self.status,
+        }
+
+
+def collect_links(cfg):
+    records = []
+    for root, scope in scan_roots(cfg):
+        if not root.is_dir():
+            continue
+        try:
+            entries = sorted(root.iterdir())
+        except OSError:
+            continue
+        for entry in entries:
+            if not entry.is_symlink():
+                continue
+            try:
+                target = os.readlink(str(entry))
+            except OSError:
+                target = ""
+            real = os.path.realpath(str(entry))
+            status = "valid" if os.path.exists(str(entry)) else "broken"
+            records.append(LinkRecord(entry, scope, target, real, status))
+    return records
+
+
+def classify_broken(cfg, real):
+    real_norm = os.path.normpath(real)
+    if real_norm.startswith(os.path.normpath(str(cfg.hub))):
+        return "hub"
+    if real_norm.startswith(os.path.normpath(str(cfg.vault_root))):
+        return "vault"
+    return "other"
+
+
+def build_map(cfg):
+    skills = discover_skills(cfg)
+    by_real = {s.real: s.name for s in skills.values()}
+    links = collect_links(cfg)
+
+    per_skill = {name: [] for name in skills}
+    broken = []
+    for rec in links:
+        # Attribution is by resolved path, not by link name: a link named `alpha`
+        # that resolves somewhere else is not this hub's alpha. This holds for
+        # broken links too — realpath still yields the intended destination.
+        owner = by_real.get(os.path.normpath(rec.real))
+        if owner is not None:
+            per_skill[owner].append(rec)
+        if rec.status == "broken":
+            broken.append(rec)
+
+    out_skills = []
+    for name in sorted(skills):
+        s = skills[name]
+        out_skills.append(
+            {
+                "name": name,
+                "tier": s.tier,
+                "canonical": str(s.path),
+                "links": [r.as_dict() for r in per_skill[name]],
+            }
+        )
+    out_broken = []
+    for rec in broken:
+        d = rec.as_dict()
+        d["points_into"] = classify_broken(cfg, rec.real)
+        out_broken.append(d)
+    return {"hub": str(cfg.hub), "skills": out_skills, "broken_links": out_broken}
+
+
+# --------------------------------------------------------------------------
+# frontmatter
+# --------------------------------------------------------------------------
+
+
+def split_frontmatter(text):
+    """Return (list_of_frontmatter_lines, body). Empty list when there is none."""
+    if not text.startswith("---"):
+        return [], text
+    lines = text.splitlines(keepends=True)
+    if lines[0].strip() != "---":
+        return [], text
+    for i in range(1, len(lines)):
+        if lines[i].strip() == "---":
+            return [l.rstrip("\n") for l in lines[1:i]], "".join(lines[i + 1 :])
+    return [], text
+
+
+def frontmatter_get(lines, key):
+    prefix = key + ":"
+    for line in lines:
+        if line.startswith(prefix):
+            return line[len(prefix) :].strip()
+    return None
+
+
+def join_frontmatter(lines, body):
+    return "---\n" + "\n".join(lines) + "\n---\n" + body
+
+
+# --------------------------------------------------------------------------
+# link surgery
+# --------------------------------------------------------------------------
+
+
+def scope_targets(cfg, scope, name):
+    if scope == "global":
+        return [cfg.claude_root / name, cfg.codex_root / name]
+    if scope == "hermes":
+        return [cfg.hermes_farm / name]
+    base = Path(os.path.expanduser(scope))
+    if not base.is_absolute():
+        base = (Path.cwd() / base).resolve()
+    return [
+        base / ".claude" / "skills" / name,
+        base / ".agents" / "skills" / name,
+    ]
+
+
+def place_link(target, canonical):
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if target.is_symlink():
+        if os.path.realpath(str(target)) == os.path.realpath(str(canonical)):
+            return "already linked"
+        target.unlink()
+    elif target.exists():
+        raise SystemExit(
+            "refusing to replace real content at %s (not a symlink)" % target
+        )
+    os.symlink(str(canonical), str(target))
+    return "linked"
+
+
+def remove_link(target, canonical):
+    if not target.is_symlink():
+        return "no link"
+    if os.path.realpath(str(target)) != os.path.realpath(str(canonical)):
+        return "left alone (points elsewhere: %s)" % os.path.realpath(str(target))
+    target.unlink()
+    return "unlinked"
+
+
+# --------------------------------------------------------------------------
+# vendor drift + refresh
+# --------------------------------------------------------------------------
+
+
+def tree_files(base):
+    out = []
+    for root, dirs, files in os.walk(base):
+        dirs[:] = [d for d in dirs if d not in (".git", "__pycache__")]
+        for f in files:
+            if f == ".DS_Store":
+                continue
+            out.append(os.path.relpath(os.path.join(root, f), base))
+    return sorted(out)
+
+
+def vendor_upstream(skill):
+    skill_md = skill.path / "SKILL.md"
+    if not skill_md.exists():
+        return None
+    lines, _ = split_frontmatter(skill_md.read_text())
+    raw = frontmatter_get(lines, "upstream")
+    if not raw:
+        return None
+    return Path(os.path.expanduser(raw))
+
+
+def canonical_skill_md(text):
+    """SKILL.md text with the vendoring-added frontmatter keys stripped."""
+    lines, body = split_frontmatter(text)
+    if not lines:
+        return text
+    kept = [
+        l for l in lines if not any(l.startswith(k + ":") for k in VENDOR_KEYS)
+    ]
+    return join_frontmatter(kept, body)
+
+
+def vendor_diff(skill, upstream):
+    """Return (added, removed, changed) relative paths: upstream vs vendored copy."""
+    up_files = set(tree_files(upstream))
+    ven_files = set(tree_files(skill.path))
+    added = sorted(up_files - ven_files)
+    removed = sorted(ven_files - up_files)
+    changed = []
+    for rel in sorted(up_files & ven_files):
+        up = upstream / rel
+        ven = skill.path / rel
+        if rel == "SKILL.md":
+            if canonical_skill_md(ven.read_text()) != up.read_text():
+                changed.append(rel)
+            continue
+        try:
+            if not filecmp.cmp(str(up), str(ven), shallow=False):
+                changed.append(rel)
+        except OSError:
+            changed.append(rel)
+    return added, removed, changed
+
+
+def do_vendor_refresh(cfg, name):
+    skill = resolve_skill(cfg, name)
+    if skill.tier != "external":
+        raise SystemExit("%s is not an external-tier skill" % name)
+    upstream = vendor_upstream(skill)
+    if upstream is None:
+        raise SystemExit("%s has no `upstream:` recorded in its SKILL.md" % name)
+    if not upstream.is_dir():
+        raise SystemExit("upstream path does not exist: %s" % upstream)
+
+    added, removed, changed = vendor_diff(skill, upstream)
+
+    existing = (skill.path / "SKILL.md").read_text() if (skill.path / "SKILL.md").exists() else ""
+    existing_lines, _ = split_frontmatter(existing)
+    preserved = []
+    for key in VENDOR_KEYS:
+        value = frontmatter_get(existing_lines, key)
+        if key == "upstream":
+            value = str(upstream)
+        elif key == "static" and value is None:
+            value = "true"
+        elif key == "tier" and value is None:
+            value = "external"
+        if value is not None:
+            preserved.append("%s: %s" % (key, value))
+
+    shutil.rmtree(skill.path)
+    shutil.copytree(str(upstream), str(skill.path), symlinks=True)
+
+    skill_md = skill.path / "SKILL.md"
+    if skill_md.exists():
+        lines, body = split_frontmatter(skill_md.read_text())
+        lines = [
+            l for l in lines if not any(l.startswith(k + ":") for k in VENDOR_KEYS)
+        ]
+        skill_md.write_text(join_frontmatter(lines + preserved, body))
+
+    print("refreshed %s from %s" % (name, upstream))
+    if not (added or removed or changed):
+        print("  no changes (already in sync)")
+    for rel in added:
+        print("  added   %s" % rel)
+    for rel in removed:
+        print("  removed %s" % rel)
+    for rel in changed:
+        print("  changed %s" % rel)
+    return 0
+
+
+# --------------------------------------------------------------------------
+# anneal queue + locks
+# --------------------------------------------------------------------------
+
+
+def undrained_cases(cfg):
+    out = []
+    for skill in discover_skills(cfg).values():
+        if skill.tier != "personal":
+            continue
+        cases = skill.path / "cases"
+        if not cases.is_dir():
+            continue
+        for entry in sorted(cases.iterdir()):
+            if not entry.is_dir() or entry.name in RESERVED_CASE_DIRS:
+                continue
+            if not DATED_CASE_RE.match(entry.name):
+                continue
+            if (entry / ".annealed").exists():
+                continue
+            out.append((skill.name, entry))
+    return out
+
+
+def pid_alive(pid):
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    except OSError:
+        return False
+    return True
+
+
+def stale_locks(cfg):
+    out = []
+    if not cfg.lock_dir.is_dir():
+        return out
+    now = time.time()
+    for entry in sorted(cfg.lock_dir.iterdir()):
+        if entry.name.startswith(".") or not entry.is_file():
+            continue
+        reasons = []
+        try:
+            age = now - entry.stat().st_mtime
+        except OSError:
+            age = 0
+        if age > LOCK_TTL_SECONDS:
+            reasons.append("older than 2h TTL")
+        pid = None
+        for line in entry.read_text().splitlines():
+            if line.strip().startswith("pid:"):
+                try:
+                    pid = int(line.split(":", 1)[1].strip())
+                except ValueError:
+                    pid = None
+        if pid is not None and not pid_alive(pid):
+            reasons.append("holder pid %d is dead" % pid)
+        if reasons:
+            out.append((entry.name, ", ".join(reasons)))
+    return out
+
+
+# --------------------------------------------------------------------------
+# commands
+# --------------------------------------------------------------------------
+
+
+def cmd_status(cfg, args):
+    data = build_map(cfg)
+    if args.json:
+        print(json.dumps(data, indent=2))
+        return 0
+
+    print("hub: %s" % data["hub"])
+    print("")
+    for skill in data["skills"]:
+        print(
+            "%-28s %-9s %s" % (skill["name"], skill["tier"], skill["canonical"])
+        )
+        if not skill["links"]:
+            print("    (no links — not served to any harness)")
+        for link in skill["links"]:
+            print(
+                "    [%s] %-8s %s"
+                % (link["status"], link["scope"], link["path"])
+            )
+        print("")
+
+    relevant = [b for b in data["broken_links"] if b["points_into"] in ("hub", "vault")]
+    other = [b for b in data["broken_links"] if b["points_into"] == "other"]
+    print("broken links into the hub or vault: %d" % len(relevant))
+    for b in relevant:
+        print("    %s -> %s (%s)" % (b["path"], b["target"], b["points_into"]))
+    if other:
+        print("broken links elsewhere: %d" % len(other))
+        for b in other:
+            print("    %s -> %s" % (b["path"], b["target"]))
+    return 0
+
+
+def cmd_doctor(cfg, args):
+    errors = []
+    warnings = []
+
+    data = build_map(cfg)
+    for b in data["broken_links"]:
+        errors.append(
+            "broken link: %s -> %s (%s)" % (b["path"], b["target"], b["points_into"])
+        )
+
+    for skill in discover_skills(cfg).values():
+        if skill.tier != "external":
+            continue
+        upstream = vendor_upstream(skill)
+        if upstream is None:
+            continue
+        if not upstream.is_dir():
+            warnings.append(
+                "%s: upstream path is gone (%s) — cannot check drift"
+                % (skill.name, upstream)
+            )
+            continue
+        added, removed, changed = vendor_diff(skill, upstream)
+        if added or removed or changed:
+            errors.append(
+                "vendored drift: %s differs from upstream %s "
+                "(added %d, removed %d, changed %d: %s)"
+                % (
+                    skill.name,
+                    upstream,
+                    len(added),
+                    len(removed),
+                    len(changed),
+                    ", ".join(added + removed + changed) or "-",
+                )
+            )
+
+    for name, case in undrained_cases(cfg):
+        warnings.append(
+            "undrained anneal case: %s/%s (no .annealed marker)" % (name, case.name)
+        )
+    for name, reason in stale_locks(cfg):
+        warnings.append("stale anneal lock: %s (%s)" % (name, reason))
+
+    if args.json:
+        print(
+            json.dumps(
+                {"ok": not errors, "errors": errors, "warnings": warnings}, indent=2
+            )
+        )
+    else:
+        if errors:
+            print("FAIL (%d)" % len(errors))
+            for e in errors:
+                print("  %s" % e)
+        else:
+            print("OK — no broken links, no vendored drift")
+        if warnings:
+            print("")
+            print("WARN (%d — not failures)" % len(warnings))
+            for w in warnings:
+                print("  %s" % w)
+    return 1 if errors else 0
+
+
+def cmd_link(cfg, args):
+    skill = resolve_skill(cfg, args.skill)
+    for target in scope_targets(cfg, args.scope, skill.name):
+        print("%s: %s" % (place_link(target, skill.path), target))
+    if args.scope not in ("global", "hermes"):
+        base = Path(os.path.expanduser(args.scope))
+        if not base.is_absolute():
+            base = (Path.cwd() / base).resolve()
+        if append_registry(cfg, str(base)):
+            print("registered scope: %s" % base)
+    return 0
+
+
+def cmd_unlink(cfg, args):
+    skill = resolve_skill(cfg, args.skill)
+    for target in scope_targets(cfg, args.scope, skill.name):
+        print("%s: %s" % (remove_link(target, skill.path), target))
+    return 0
+
+
+def cmd_disable(cfg, args):
+    skill = resolve_skill(cfg, args.skill)
+    removed = 0
+    for rec in collect_links(cfg):
+        if rec.path.name != skill.name:
+            continue
+        if os.path.realpath(str(rec.path)) != os.path.realpath(str(skill.path)):
+            continue
+        rec.path.unlink()
+        removed += 1
+        print("unlinked: %s" % rec.path)
+    print(
+        "disabled %s — %d link(s) removed; canonical content untouched at %s"
+        % (skill.name, removed, skill.path)
+    )
+    return 0
+
+
+def cmd_enable(cfg, args):
+    skill = resolve_skill(cfg, args.skill)
+    if args.scope:
+        for target in scope_targets(cfg, args.scope, skill.name):
+            print("%s: %s" % (place_link(target, skill.path), target))
+        if args.scope not in ("global", "hermes"):
+            base = Path(os.path.expanduser(args.scope)).resolve()
+            append_registry(cfg, str(base))
+        return 0
+    print("%s is canonical at %s" % (skill.name, skill.path))
+    print("to serve it, link it at a scope:")
+    print("  bin/skills link %s --scope global" % skill.name)
+    print("  bin/skills link %s --scope hermes" % skill.name)
+    print("  bin/skills link %s --scope /path/to/repo" % skill.name)
+    return 0
+
+
+def cmd_vendor(cfg, args):
+    if not args.refresh:
+        raise SystemExit("vendor: --refresh <skill> is required")
+    return do_vendor_refresh(cfg, args.refresh)
+
+
+# --------------------------------------------------------------------------
+
+
+def build_parser():
+    p = argparse.ArgumentParser(prog="skills", description=__doc__.splitlines()[0])
+    p.add_argument("--root", help="hub repo root (default: this script's repo)")
+    sub = p.add_subparsers(dest="command", required=True)
+
+    s = sub.add_parser("status", help="master map of every skill and its links")
+    s.add_argument("--json", action="store_true")
+    s.set_defaults(func=cmd_status)
+
+    d = sub.add_parser("doctor", help="broken-link and drift audit")
+    d.add_argument("--json", action="store_true")
+    d.set_defaults(func=cmd_doctor)
+
+    l = sub.add_parser("link", help="link a skill at a scope")
+    l.add_argument("skill")
+    l.add_argument("--scope", required=True, help="global | hermes | <dir>")
+    l.set_defaults(func=cmd_link)
+
+    u = sub.add_parser("unlink", help="remove a skill's links at a scope")
+    u.add_argument("skill")
+    u.add_argument("--scope", required=True, help="global | hermes | <dir>")
+    u.set_defaults(func=cmd_unlink)
+
+    e = sub.add_parser("enable", help="re-link a skill, or show how")
+    e.add_argument("skill")
+    e.add_argument("--scope", help="global | hermes | <dir>")
+    e.set_defaults(func=cmd_enable)
+
+    x = sub.add_parser("disable", help="remove every link for a skill")
+    x.add_argument("skill")
+    x.set_defaults(func=cmd_disable)
+
+    v = sub.add_parser("vendor", help="external-tier maintenance")
+    v.add_argument("--refresh", metavar="SKILL", help="re-copy from upstream")
+    v.set_defaults(func=cmd_vendor)
+
+    return p
+
+
+def main(argv=None):
+    args = build_parser().parse_args(argv)
+    cfg = Config(args.root)
+    return args.func(cfg, args)
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except BrokenPipeError:
+        sys.exit(0)
