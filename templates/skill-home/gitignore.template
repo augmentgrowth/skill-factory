@@ -1,0 +1,13 @@
+# Skill-home gitignore. Rename this file to `.gitignore` in your skill home
+# (it is named `gitignore.template` here so the factory's own repo scrub
+# doesn't have to reason about a second .gitignore living inside a template).
+
+# Anneal locks are machine-local runtime state, never repo content.
+.anneal/locks/
+
+# Python noise from running bin/skills and its tests.
+__pycache__/
+*.pyc
+
+# Secrets: never commit a real .env; commit .env.example instead.
+.env

@@ -63,6 +63,10 @@ skill-factory/
 └── README.md
 ```
 
+## Skill home template
+
+Building skills is one half of the picture; where they *live* across every harness you use (Claude Code, Codex, Hermes, ...) is the other. `templates/skill-home/` ships the generic version of that pattern: a personal tier (`.claude/skills/`), a never-self-annealed external tier (`vendor/skills/`) for vendored skills, a `bin/skills` CLI (stdlib-only Python — `status`/`link`/`unlink`/`doctor`) for placing per-skill symlinks at global, folder, or repo scope instead of copying content everywhere, and the anneal-queue conventions the factory's own `improve-skill` relies on. See `templates/skill-home/README.md` for the full layout, init steps, and harness-by-harness discovery notes. `docs/publish-path.md` sketches (design only, nothing built) how such a hub can later export as a Claude Code plugin.
+
 ## Appendix: agent-driven bootstrap (fallback when you can't clone)
 
 If you can't reach this repo from the target machine, an agent can rebuild the factory from the spec alone.
