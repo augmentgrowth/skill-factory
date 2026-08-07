@@ -6,9 +6,9 @@ As the background anneal agent in an AE1 drill, against the plugin-resolved copy
 `~/.claude/plugins/cache/skill-factory/skill-factory/0.3.0/skills/improve-skill/SKILL.md`
 (byte-identical to this repo's copy). The agent was told to follow the protocol exactly.
 
-Target of that anneal: `support-ticket-digest` in the hub repo
-(`~/code/hypergrowthagents/skills`). That anneal itself succeeded — this case is about the
-lock step the agent had to hand-correct on the way through.
+Target of that anneal: a `support-ticket-digest` skill living in a separate private build-home
+repo, reached from the drill session by `realpath` on its serving link. That anneal itself
+succeeded — this case is about the lock step the agent had to hand-correct on the way through.
 
 ## The exact instruction that failed
 
