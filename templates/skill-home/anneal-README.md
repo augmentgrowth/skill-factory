@@ -26,8 +26,12 @@ personal-tier skill that has **no `.annealed` marker file**.
 `.anneal/locks/<skill>` is held by the anneal agent for the duration of one
 anneal, so two sessions never rewrite the same skill at once.
 
-- The lock file records the holder: `pid: <n>` and `started: <iso8601>`.
+- The lock file records the holder: `pid: <n>` and `started: <iso8601>`. `<n>` is
+  the anneal agent's own durable process — **not** the shell that wrote the file,
+  whose pid dies as soon as its command returns and would make the lock look
+  stale from birth. When no durable pid is available, `pid: unknown` is correct.
 - TTL is 2 hours. `bin/skills doctor` warns about any lock past TTL or whose
-  holder PID is dead, so it can be reclaimed.
+  holder PID is confirmed dead, so it can be reclaimed. An unknown or
+  unverifiable pid is not treated as dead — the timestamp governs.
 - `.anneal/locks/` is gitignored — locks are machine-local runtime state, never
   repo content.

@@ -173,12 +173,26 @@ never takes it.**
 1. **Acquire** `<repo>/.anneal/locks/<skill>` by atomic create (fail if it already exists). Content,
    two lines exactly (this is the format the repo's audit tooling parses — do not improvise):
    `pid: <n>` then `started: <ISO-8601 timestamp>`.
-2. **Already held by a live holder** (its pid is a running process and its recorded `started:` is
-   under two hours old) → **exit quietly.** Do not wait, do not double-anneal. The case stays
-   queued and the holder or a later sweep handles it.
-3. **Stale** — the recorded pid is dead, or the recorded `started:` is more than two hours old →
-   reclaim it: overwrite with your own pid and timestamp, and continue. (Audit tooling may also use
-   the lock file's age as a fallback signal when the `started:` line is missing or unparseable.)
+
+   **`<n>` is the pid of the long-lived process doing the anneal** — your agent/session process,
+   the one that will still be alive through Step 6. It is **not** the pid of the shell that writes
+   the file. Writing that shell's own `$$` from a one-liner is the natural move and it is **wrong**:
+   each tool-call shell exits when its command returns, so its `$$` is dead almost immediately, the
+   lock is born recording a dead process, and every later liveness check reads it as stale. Read
+   your session's pid from the runtime rather than from the shell doing the write. If you cannot
+   determine a pid that outlives the acquire command, write `pid: unknown` — never a pid you already
+   know will be dead.
+2. **Already held by a live holder** → **exit quietly.** Do not wait, do not double-anneal. The case
+   stays queued and the holder or a later sweep handles it. "Live" means the recorded `started:` is
+   under two hours old **and** the pid does not positively disprove it:
+   - pid names a running process → the pid does not disprove liveness; the timestamp still governs.
+   - `pid: unknown`, or a pid you cannot check on this platform → same: **treat as live** and back
+     off while the timestamp is young. An unverifiable pid is not evidence of death.
+   - pid names no running process → dead; go to 3.
+3. **Stale** — the recorded `started:` is more than two hours old, **or** the recorded pid is
+   confirmed dead → reclaim it: overwrite with your own pid and timestamp, and continue. (Audit
+   tooling may also use the lock file's age as a fallback signal when the `started:` line is missing
+   or unparseable.)
 4. **Release** — delete the lock file — at *every* exit: green, exhausted, aborted preflight, or
    error. A lock outliving its run is the one failure mode that stalls a whole skill.
 5. Locks are runtime state, never committed. The home repo ignores `.anneal/locks/`; if it does not
@@ -240,6 +254,12 @@ skip the git steps with a plain one-line notice, and note the retrofit for when 
 - **Preflight the folder, not the repo.** A whole-repo status check makes every unrelated bit of
   dirty work in a busy repo look like a blocker, and nothing ever anneals.
 - **A background run must never ask a question.** There is no one to answer; the run just hangs.
+- **The lock's pid must outlive the shell that writes it.** Each tool-call shell exits when its
+  command returns, so a lock acquired with that shell's own `$$` records a pid that is dead within
+  milliseconds. Every subsequent liveness check then reads the lock as stale and reclaims it — so
+  the lock silently stops excluding anyone and two agents anneal the same skill at once, which is
+  the exact thing it exists to prevent. Record the session's durable pid, or `pid: unknown`. Found
+  by a drill agent that hit it, noticed, and hand-corrected — the protocol had not said whose pid.
   Abort and requeue instead — the queue is the safe default, not a failure.
 - **The `.annealed` marker is what ends the loop.** Green or escalated, write it. Without it the
   same case is picked up by every future sweep.
