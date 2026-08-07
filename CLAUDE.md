@@ -154,13 +154,16 @@ guaranteed. Differences are additive, not conflicting.
 | Concern | Claude Code | Codex (verified) |
 |---|---|---|
 | Repo spec file | `CLAUDE.md`, auto-loaded | `AGENTS.md` symlink → `CLAUDE.md`; Codex auto-loads repo-root `AGENTS.md` and the symlink resolves (it quoted the spec and routed with no prompt to read it) |
-| Project skill discovery | `.claude/skills/` (auto-discovered, incl. nested) | **No project skill auto-discovery** (not `.claude/skills/`, not `.agents/skills/`). Codex reaches a skill only because `AGENTS.md` instructs it to read `.claude/skills/<name>/SKILL.md` by path. Codex's native auto-discovery is personal-only (`~/.codex/skills`). |
+| Project skill discovery | `.claude/skills/` (auto-discovered, incl. nested) | **Repo-root `.agents/skills/` IS auto-discovered** (verified 2026-08-05 vs Codex CLI 0.144.0; the upward scan from cwd stops at the repo root, so a link placed in an *ancestor* of the repo, e.g. `~/code/.agents/skills/`, is not reached). `.claude/skills/` is still completely invisible to Codex regardless of location — this factory's own skills live there, so Codex still reaches them only because `AGENTS.md` instructs it to read `.claude/skills/<name>/SKILL.md` by path. Codex's other native auto-discovery tier is personal-only (`~/.codex/skills`), where symlinks resolve correctly. |
 | Personal install target | `~/.claude/skills/` | `~/.codex/skills/` (or `$CODEX_HOME/skills`) — auto-discovered there |
 | Ignored frontmatter | — | Everything except `name` + `description` is read-inert — so `context: fork`, `allowed-tools`, `hooks`, and `static:` are all ignored (Codex's own skill-creator docs: "the only fields that Codex reads"). The `static:` flag stays portability-free. |
 | Extra manifest | none | `agents/openai.yaml` is **optional** UI metadata only (display name, icon, chips, `policy.allow_implicit_invocation`). Never required — build + anneal ran green with none present. |
 
 **Gotcha:** adding a new skill directory mid-session may not hot-load into the `/` menu. Run with-skill
 tests by explicit invocation — name the skill or point the agent at its `SKILL.md` — not by relying on
-the menu. Under Codex this is not merely a hot-load caveat: project `.claude/skills/` skills are *never*
-auto-loaded as invocable `$skill` entries, so with-skill testing there is **always** by explicit
-`SKILL.md` read (which is exactly how `AGENTS.md` routes into them).
+the menu. Under Codex this is not merely a hot-load caveat: project `.claude/skills/` skills (which is
+where this factory's own skills live) are *never* auto-loaded as invocable `$skill` entries, so
+with-skill testing there is **always** by explicit `SKILL.md` read (which is exactly how `AGENTS.md`
+routes into them). This is now a `.claude/skills/`-specific limitation, not a blanket "Codex has no
+project skill discovery" statement — a repo that instead places skills at `.agents/skills/` gets
+real auto-discovery, verified above.
