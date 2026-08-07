@@ -8,3 +8,6 @@
 
 # OS noise
 .DS_Store
+
+# Anneal runtime state: per-skill locks are machine-local, never repo content
+.anneal/locks/
