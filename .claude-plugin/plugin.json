@@ -1,6 +1,6 @@
 {
   "name": "skill-factory",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "A factory-in-a-box for building top-tier Claude skills: guided intake, baseline-beating tests, and a built-in self-improvement loop",
   "author": {
     "name": "Malachi Rose (Augment Growth)"
