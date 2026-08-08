@@ -38,10 +38,31 @@ make), and STOP. No commits to the skill body, no annealing.
 
 Where the proposal and case live depends on the tier:
 
-- **Vendored/external skill** (lives in a `vendor/` tree, tracks an upstream copy): write NOTHING
-  into the skill's folder — a case dir there reads as drift from upstream and turns the repo's
-  health check red. Put the proposal (plus any repro material) somewhere builder-visible outside
-  the vendor tree; these skills never enter the anneal queue.
+- **Vendored/external skill.** Identify it by frontmatter and location: `tier: external`, or the
+  skill lives under a `vendor/` tree. **A missing `upstream:` key does not disqualify it** — a
+  skill adopted in place can be external with no reachable upstream to diff against.
+
+  Write NOTHING into the skill's folder — a case dir there reads as drift from upstream and turns
+  the repo's health check red. These skills never enter the anneal queue, so **the proposal file is
+  the only record that the failure was ever found**; treat losing it as losing the finding.
+
+  - **Where:** `<repo>/docs/proposals/<YYYY-MM-DD>-<skill>-<slug>.md`. Create `docs/proposals/` if
+    absent. `<repo>` is the repo that owns the skill — resolve it now the way Step 2 does
+    (`realpath` the serving path, then `rev-parse --show-toplevel`); it is never the repo you happen
+    to be standing in. Use this path even when the repo has some other proposals directory for a
+    different genre — one predictable location beats a well-reasoned guess, because the next agent
+    will guess differently. The date prefix matters: a recurrence with the same slug must not
+    silently overwrite the earlier proposal.
+  - **Durability:** save it permanently, path-scoped and alone —
+    `git -C <repo> add docs/proposals/<YYYY-MM-DD>-<skill>-<slug>.md` then
+    `Proposal for <skill>: <slug> (static — not self-edited)`. A proposal left loose in a busy repo
+    is one cleanup away from gone, and nothing in the queue will notice it is missing.
+  - **Do not save it into the repo when** the repo is not yours to write to (a background run that
+    hit stray paths, or another session's branch), **or when the repo publishes** — a public remote,
+    or an auto-sync cron that turns a save into a push. A proposal quotes real paths and machine
+    detail, and this is the one save in the protocol that happens before any preflight has run.
+    In those cases leave the file where it is, tell the builder its location in plain language, and
+    say plainly that it is not saved permanently yet.
 - **Personal-tier skill carrying `static: true`:** if a case was already captured — you got here
   from the queue — write the terminal marker from Step 7 and commit it alone
   (`Mark case terminal for <skill>: <slug> (static — proposal written)`) so the proposal is not
@@ -254,6 +275,13 @@ skip the git steps with a plain one-line notice, and note the retrofit for when 
 - **Preflight the folder, not the repo.** A whole-repo status check makes every unrelated bit of
   dirty work in a busy repo look like a blocker, and nothing ever anneals.
 - **A background run must never ask a question.** There is no one to answer; the run just hangs.
+- **A static skill's proposal is the whole record — give it an address.** Vendored skills never
+  enter the anneal queue, so nothing sweeps for a proposal and nothing notices one missing. "Write
+  it somewhere visible" is not an instruction: two agents pick two directories and the second never
+  finds the first. Name the path, name the filename shape, and say whether to save it. Note the
+  asymmetry this cuts against — the safety half of a static failure (never touch the skill folder)
+  is easy to specify and easy to verify, so it gets written precisely; the liveness half (the
+  builder actually receives the proposal) is neither, so it silently doesn't.
 - **The lock's pid must outlive the shell that writes it.** Each tool-call shell exits when its
   command returns, so a lock acquired with that shell's own `$$` records a pid that is dead within
   milliseconds. Every subsequent liveness check then reads the lock as stale and reclaims it — so
