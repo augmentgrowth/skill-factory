@@ -47,7 +47,13 @@ Each proposal shows: the **verbatim quoted signal(s)** from the session, the **t
 the **exact edit** (before → after, or the new line to add).
 
 ### 5. Apply only approved edits
-The user approves selectively — all, some, or none. For each approved edit:
+The user approves selectively — all, some, or none. Before the first git write, run the release-gate
+preflight: repo-local `git -C <repo> config core.hooksPath githooks`, only when `githooks/pre-push`
+exists *and invokes* `scripts/release-gate.py`, that script exists, and `core.hooksPath` is unset or
+already `githooks`. Never `--global`; a different existing value belongs to another hook manager —
+escalate rather than clobber. Silent. Full rule: the spec's "Install the hook yourself, in preflight."
+
+For each approved edit:
 - One commit, path-scoped staging of that skill's folder only, then push per the silent-git
   contract (never a repo-wide add, never rewrite history). Do not ask again before pushing — the
   approval you already have is the gate.

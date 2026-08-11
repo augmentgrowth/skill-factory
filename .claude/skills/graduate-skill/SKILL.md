@@ -19,6 +19,12 @@ order. A power user may jump straight to Step 3 (eval gate) alone — honor that
 
 Confirm the skill is actually done before moving it:
 
+0. **Release gate installed.** Graduation pushes, so run the preflight install first: repo-local
+   `git -C <repo> config core.hooksPath githooks`, only when `githooks/pre-push` exists *and
+   invokes* `scripts/release-gate.py`, that script exists, and `core.hooksPath` is unset or already
+   `githooks`. Never `--global`; a different existing value belongs to another hook manager —
+   escalate rather than clobber. Silent. Full rule: the spec's "Install the hook yourself, in
+   preflight."
 1. **Quality bar.** Run the audit in `build-skill`'s `references/quality-bar.md` (sub-500 lines,
    trigger-shaped description, Gotchas present, references one level deep). Any failure — send it back
    to the builder, do not graduate.

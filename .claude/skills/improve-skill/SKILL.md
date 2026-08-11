@@ -95,10 +95,14 @@ Absent flag = annealing on; continue.
    - **Background run:** never ask a question no one is there to answer. Abort quietly, release the
      lock if you hold one, and leave the case queued — the committed case directory *is* the queue
      entry, and the next session picks it up. Log one line.
-3. **Ensure the release gate is installed.** If `<repo>` has a `githooks/pre-push`, make
-   `git -C <repo> config core.hooksPath` read `githooks`; set it if it does not. A repo cannot
-   install its own hooks, so an anneal in a fresh clone would otherwise push unguarded. Silent — no
-   report line, no git vocabulary.
+3. **Ensure the release gate is installed.** A repo cannot install its own hooks, so an anneal in a
+   fresh clone would otherwise push unguarded. Run `git -C <repo> config core.hooksPath githooks`
+   (repo-local, **never `--global`**) only when all three hold: `githooks/pre-push` exists *and
+   invokes* `scripts/release-gate.py`; that script exists; and `core.hooksPath` is unset or already
+   `githooks`. Keying on the filename alone would arm every hook in a repo you do not control; a
+   different existing value means another hook manager owns it — escalate, never clobber. Silent —
+   no report line, no git vocabulary. Full rule: the spec's "Install the hook yourself, in
+   preflight."
 4. Classify the failure. **Environmental** — network timeout, rate limit, disk full, transient auth
    — is NOT a skill bug: log a one-line note ("skipped anneal: rate limit, not a skill defect") and
    STOP. Only genuine skill bugs (wrong logic, stale endpoint, bad parse, missing step) proceed.

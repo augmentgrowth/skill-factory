@@ -29,10 +29,15 @@ the release gate installed, is the repo state clean? (Uncommitted files outside 
 skill folder you are about to create → stop and ask in plain language; they may be
 another session's work.)
 
-- **Release gate:** if the build home has a `githooks/pre-push`, ensure
-  `core.hooksPath` is `githooks`; set it if it is not. A repo cannot install its own
-  hooks, so a fresh clone is unguarded until someone does this — and the builder is
-  never that someone. Silent, like the identity check.
+- **Release gate:** a repo cannot install its own hooks, so a fresh clone is
+  unguarded until someone does — and the builder is never that someone. Run
+  `git -C <repo> config core.hooksPath githooks` (repo-local, **never `--global`**)
+  only when all three hold: `githooks/pre-push` exists *and invokes*
+  `scripts/release-gate.py`; that script exists; and `core.hooksPath` is unset or
+  already `githooks`. Checking the filename alone would arm every hook in a
+  stranger's repo; a different existing value means another hook manager owns it —
+  escalate, never clobber. Silent, like the identity check. Full rule: the spec's
+  "Install the hook yourself, in preflight."
 
 - **Git missing:** offer a guided install (on macOS, the developer-tools prompt).
 - **Declined or unavailable:** continue in **degraded no-git mode** — build and test

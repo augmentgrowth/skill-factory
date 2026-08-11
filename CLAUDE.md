@@ -76,13 +76,27 @@ git-tracked history from birth.
   alone: `scripts/release-gate.py --release`, enforced on every push by `githooks/pre-push`.
   A gate nothing invokes is documentation. Running the script by hand is a *diagnostic*: it exits
   non-zero even when clean, so `release-gate.py && git push` can never stand in for the hook.
-- **Install the hook yourself, in preflight.** Nothing inside a git repo can set its own
-  `core.hooksPath`, so a fresh clone starts unguarded. That install is YOUR job, not a setup step
-  left to the builder: whenever a build home contains `githooks/pre-push`, silently ensure
-  `core.hooksPath` is `githooks` before any git work. Same posture as the identity check — no
-  announcement, no git vocabulary. **The residual is real and must not be papered over:** a clone
-  that nobody ever drives through the factory stays unguarded, which is why `README.md` states the
-  install as a plain command for anyone who pushes by hand.
+- **Install the hook yourself, in preflight — under all three conditions.** Nothing inside a git
+  repo can set its own `core.hooksPath`, so a fresh clone starts unguarded, and that install is
+  YOUR job rather than a setup step left to the builder. Before any git work in a build home, run
+  `git -C <repo> config core.hooksPath githooks` **only when every one of these holds**:
+  1. `<repo>/githooks/pre-push` exists **and its body invokes `scripts/release-gate.py`**, which
+     also exists. Setting `core.hooksPath` arms *every* hook in that directory, so keying on the
+     filename alone would execute a stranger's `pre-commit` on your first commit. Git refuses to
+     honor cloned hooks precisely to prevent this; do not hand that protection away. This matters
+     most under a plugin install, where the build home is whatever repo the builder happens to be
+     standing in.
+  2. `core.hooksPath` is currently **unset or already `githooks`**. Anything else means another
+     hook manager (husky, pre-commit) owns it — escalate in plain language, never clobber.
+  3. The command is **repo-local**. Never `--global`: that would disable hooks in every other repo
+     on the machine, silently, since this check makes no announcement.
+
+  Same posture as the identity check — no announcement, no git vocabulary. **The residual is real
+  and must not be papered over:** a clone that nobody ever drives through the factory stays
+  unguarded, which is why `README.md` states the install as a plain command for anyone who pushes
+  by hand. Every skill that pushes runs this preflight — `build-skill`, `improve-skill`,
+  `graduate-skill`, `learn-from-session` — because the gap belongs to whichever one touches git
+  first, not to the one that happens to be documented.
 - **Never rewrite history.** Rollback is a path-scoped restore committed as a *new* commit. Repo
   HEAD never moves, and no published commit is ever amended, rebased, or force-pushed.
 - **Per-skill tags.** `<skill>/rollback-<n>` marks the last accepted state before a gated change;
