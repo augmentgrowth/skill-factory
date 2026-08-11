@@ -13,6 +13,10 @@ net; preference mining is judgment, so it is **PROPOSE-FIRST with human approval
 nothing until the user says so. Where the harness supports session-end hooks, this may run
 automatically at session end; on-request invocation is the portable path.
 
+**The approval covers shipping.** It is one gate, not two: the user confirms *what* you understood
+about them, and that same yes carries the edit through commit and push. Only the user knows whether
+you read them correctly — but once they say so, there is nothing left for a second ask to decide.
+
 ## Protocol
 
 ### 1. Scan the session
@@ -44,8 +48,9 @@ the **exact edit** (before → after, or the new line to add).
 
 ### 5. Apply only approved edits
 The user approves selectively — all, some, or none. For each approved edit:
-- One commit, path-scoped staging of that skill's folder only (silent-git contract — never a
-  repo-wide add, never push, never rewrite history).
+- One commit, path-scoped staging of that skill's folder only, then push per the silent-git
+  contract (never a repo-wide add, never rewrite history). Do not ask again before pushing — the
+  approval you already have is the gate.
 - Add a CHANGELOG.md line: `[YYYY-MM-DD] Learned from session: <what>`.
 
 **Declined signals are discarded** — never queued, never re-proposed from memory.
