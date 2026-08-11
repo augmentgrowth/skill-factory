@@ -96,6 +96,14 @@ Read the two arms side by side. The audit passes when:
        to the remote" is reading wording that is still wrong —
        the README, not the reader, is the thing that failed.
 
-If Q1a does not flip, the control ref is wrong or the edit
-did not land. If Q2 or Q3 moved, stop and re-read the spec.
+The DISCRIMINATING question depends on which change you are
+auditing, and only that one has to flip. Q1a discriminates a
+push-policy edit; Q5 discriminates a README edit. Picking a
+control ref that already contains the push policy will leave
+Q1a identical in both arms, and that is correct, not a
+failure. Q2 and Q3 are invariants and must hold either way.
+
+If the question you are auditing does not flip, the control
+ref is wrong or the edit did not land. If Q2 or Q3 moved,
+stop and re-read the spec.
 __X__
