@@ -135,6 +135,20 @@ you make it self-heal. Static skills (see below) are exempt — they get a fix p
 - "undo that" / "go back to yesterday's version" → path-scoped restore of that skill's folder,
   committed as a NEW commit (never a history rewrite).
 
+**Undo has three shapes.** All three restore the one skill's folder and land as a new commit; repo
+HEAD never moves backwards:
+
+- **Normal** — restore the folder from that skill's latest `rollback-<n>` tag.
+- **A rejected first release** — there is no earlier accepted state, so undo means a path-scoped
+  deletion of the skill folder, committed and released like any other change.
+- **A rejected graduation** — restore the build home *and* reinstall the personal copy. The
+  installed copy is a frozen copy that never auto-updates, so a build-home-only restore leaves the
+  rejected version live wherever it was graduated to.
+
+**Tags are immutable.** Never move, reuse, or force-update one. `git push` does not carry tags by
+default — publish the branch and its new tags together, or the release is not complete. A tag that
+exists only locally protects nothing on another machine.
+
 ## The case/fixture convention
 
 One committed `cases/` directory per skill serves baseline, regression, and anneal. Comparison is always
