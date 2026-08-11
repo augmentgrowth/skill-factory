@@ -19,6 +19,23 @@ while read -r local_ref local_sha remote_ref remote_sha; do
   # Deleting a remote ref publishes nothing.
   [ "$local_sha" = "$ZERO" ] && continue
 
+  # A tag is a pointer, not a release of its target's tree. Rollback tags point
+  # at deliberately OLDER states, which will fail checks that describe the
+  # current release -- gating them would make the rollback affordance
+  # unpublishable. Skip only when the target is already reachable from a remote
+  # branch, i.e. it was gated when that branch was pushed; a tag on an unpushed
+  # commit still carries new content and is gated normally.
+  case "$remote_ref" in
+    refs/tags/*)
+      target=$(git rev-list -n1 "$local_sha" 2>/dev/null)
+      if [ -n "$target" ] && [ -n "$(git branch -r --contains "$target" 2>/dev/null)" ]; then
+        echo "pre-push: $remote_ref points at an already-published commit -- no new content"
+        continue
+      fi
+      echo "pre-push: $remote_ref points at an unpublished commit -- gating it"
+      ;;
+  esac
+
   echo "pre-push: running release gate for $remote_ref"
   if ! "$GATE" --release --local-sha "$local_sha" --remote-sha "$remote_sha"; then
     echo "pre-push: BLOCKED -- $remote_ref not pushed" >&2

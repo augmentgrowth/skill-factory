@@ -373,6 +373,35 @@ class PushEnforcement(GateFixture):
         self.assertIn("BLOCKED", result.stderr + result.stdout)
         self.assertEqual(self.remote_head(), before, "remote ref advanced despite a failed gate")
 
+    def test_tag_on_a_published_commit_pushes(self):
+        """A rollback tag points at a deliberately older state.
+
+        Gating it would evaluate that old tree against current release rules and
+        fail, making the rollback affordance unpublishable — the exact tag the
+        review gate depends on.
+        """
+        old = self.git("rev-parse", "HEAD").strip()
+        write(self.repo / "docs/notes.md", "notes\n")
+        self.commit("docs: notes")
+        self.git("push", "--quiet", "origin", "main")
+        self.git("tag", "-a", "sample-skill/rollback-1", old, "-m", "last accepted")
+        result = subprocess.run(
+            ("git", "-C", str(self.repo), "push", "origin", "sample-skill/rollback-1"),
+            capture_output=True, text=True,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("already-published", result.stderr + result.stdout)
+
+    def test_tag_on_an_unpublished_commit_is_still_gated(self):
+        write(self.repo / "stray/secrets.txt", "oops\n")
+        self.commit("stray")
+        self.git("tag", "-a", "sneaky-1", "HEAD", "-m", "smuggle")
+        result = subprocess.run(
+            ("git", "-C", str(self.repo), "push", "origin", "sneaky-1"),
+            capture_output=True, text=True,
+        )
+        self.assertNotEqual(result.returncode, 0, "a tag on unpushed content must be gated")
+
     def test_add_then_delete_secret_is_blocked_at_the_push(self):
         before = self.remote_head()
         write(self.repo / "private/client-secrets.md", "CLIENT SECRET\n")
