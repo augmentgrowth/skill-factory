@@ -83,6 +83,34 @@ git-tracked history from birth.
 - **Escalate — do not proceed — when:** uncommitted files exist outside the target skill's folder, edits
   look like another session's work, or a fix is uncertain. Report in plain language and ask.
 
+## The review gate
+
+Most changes ship without asking. The gate exists for the few that need a human judgment the
+machine cannot make — and even then it does not hold up the push.
+
+**Gated (three categories only):**
+
+- a new skill's **first release**,
+- a rewrite of a skill's **behavior or judgment** — its SKILL.md prose, triggers, or decision logic,
+- **graduation**.
+
+**Everything else ships silently:** script fixes, anneal patches, gotchas, changelogs, docs, cases,
+refactors. Do not ask about these; committing and pushing them is the job.
+
+**The gate is post-ship, never a block.** Ship the change, then hand the builder an **output
+receipt** to evaluate. The receipt is the previous accepted output and the candidate output, run
+against the same frozen fixtures from the skill's `cases/`, presented side by side. It is never a
+diff — the builder reviews what the skill *produces*, not how it is written. No file paths, no git
+vocabulary, no severity ratings.
+
+Bracket every gated change with tags so the receipt has a rollback target: `<skill>/rollback-<n>`
+before, `<skill>/review-<n>` on the shipped candidate. On acceptance, add `<skill>/known-good-<n>`.
+On rejection, path-scoped restore from the rollback tag as a new commit, then release again.
+
+**One exception, and it is not a human gate:** graduation's CRITICAL script-efficiency stop. That
+tests an operational property — scale, quota, silent truncation — which output review cannot
+observe. The agent fixes it and re-runs; the builder is never asked to judge it.
+
 ## The anneal protocol (summary)
 
 Full runbook: `improve-skill`. Error-driven annealing is default-on; a skill fails during real use and
