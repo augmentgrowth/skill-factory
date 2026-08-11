@@ -68,19 +68,26 @@ ALLOWLIST="$ALLOWLIST|^\.claude/skills/fable-codex/scripts/tests/run\.sh$"
 
 # ------------------------------------------------------------------- sweep --
 
-# Every (blob, path) pair reachable from any ref. rev-list --objects prints
-# "<sha> <path>" for blobs and trees; batch-check filters to blobs.
-git rev-list --objects --all > "$WORK/objects" 2>/dev/null
-awk 'NF>1 {sha=$1; $1=""; sub(/^ /,""); print sha "\t" $0}' "$WORK/objects" > "$WORK/named"
+# Every (blob, path) pair that ever existed in a tree.
+#
+# NOT `git rev-list --objects --all`, which attributes each blob to exactly ONE
+# path even when the same content lived at several. That is a real evasion:
+# identical content at an allowlisted path and at a forbidden one would report
+# only the allowlisted attribution, and the forbidden path would never be named.
+# Caught by the credential drill's control arm, which commits the same key to
+# `.env` and `.claude/skills/<name>/.env` and saw only one of them.
+#
+# Walking every commit's tree is O(commits) and slower on a large repo; that is
+# the right trade for a check whose whole job is not to miss things.
+: > "$WORK/named"
+for commit in $(git rev-list --all); do
+  git ls-tree -r "$commit" | awk '$2=="blob" {sha=$3; $1=$2=$3=""; sub(/^[ \t]+/,""); print sha "\t" $0}'
+done | sort -u > "$WORK/named"
 
-cut -f1 "$WORK/named" | sort -u > "$WORK/shas"
-if [ ! -s "$WORK/shas" ]; then
-  echo "sweep: no objects in history -- nothing to scan"
+if [ ! -s "$WORK/named" ]; then
+  echo "sweep: no blobs in history -- nothing to scan"
   exit 0
 fi
-
-git cat-file --batch-check='%(objectname) %(objecttype)' < "$WORK/shas" \
-  | awk '$2=="blob" {print $1}' | sort -u > "$WORK/blobs"
 
 findings=0
 scanned=0
@@ -100,8 +107,6 @@ report() {
 }
 
 while IFS=$'\t' read -r sha path; do
-  grep -qxF "$sha" "$WORK/blobs" || continue
-
   # A blob can live at several paths across history; judge each pairing.
   if printf '%s' "$path" | grep -Eq "$ALLOWLIST"; then
     continue
@@ -124,7 +129,7 @@ while IFS=$'\t' read -r sha path; do
     # secret into a log or a transcript.
     report "content" "$sha" "$path" "matched ${#hit} chars starting '${hit:0:8}...'"
   fi
-done < <(sort -u "$WORK/named")
+done < "$WORK/named"
 
 echo
 if [ "$findings" -eq 0 ]; then
