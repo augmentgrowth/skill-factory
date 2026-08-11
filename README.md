@@ -32,7 +32,15 @@ cd skill-factory
 # open the folder in Claude Code and say: help me build a skill
 ```
 
-That's the whole setup — under 10 minutes on a fresh machine, most of it the clone. Your clone commits your skills to your own local git history. It pushes only when the remote is yours and you can write to it; if you cloned this template and cannot push to it, everything stays local and the factory tells you so once.
+That's the whole setup — under 10 minutes on a fresh machine, most of it the clone. Your clone commits your skills to your own local git history.
+
+Publishing is narrower than committing, and deliberately so. Your clone pushes only when the remote is yours and you can write to it — if you cloned this template and cannot push to it, everything stays local and the factory tells you so once. Write access alone isn't enough either: every push runs a release gate (`scripts/release-gate.py`) that fails closed, so a push carrying an unauthorized path, a version mismatch, or an unclassified new skill is blocked rather than published.
+
+The gate runs from a git hook, and **git will not let a repository install its own hooks.** The factory installs it for you the first time you build or fix a skill in the clone, which covers the normal path. If you push by hand from a clone you've never run the factory in, run this once so the gate is actually in the loop:
+
+```bash
+git config core.hooksPath githooks
+```
 
 ### Install as a plugin (the skills, everywhere)
 
@@ -80,5 +88,5 @@ If you can't reach this repo from the target machine, an agent can rebuild the f
 - [ ] The tree matches the Layout section above (including both symlinks).
 - [ ] `python3 -c "import json; json.load(open('.claude-plugin/plugin.json'))"` exits clean.
 - [ ] `git status` is clean after the initial commit.
-- [ ] A file named `.env` placed inside any skill folder is ignored by git; `.env.example` is tracked.
+- [ ] A file named `.env` placed inside any skill folder is ignored by git; `.env.example` is tracked. (`tests/credential-drill.sh` checks this and more, without you hand-verifying it.)
 - [ ] A fresh Claude Code session in the folder responds to "help me build a skill" by starting the guided flow.

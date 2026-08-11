@@ -32,8 +32,9 @@ trap 'rm -rf "$WORK"' EXIT
 command -v claude >/dev/null 2>&1 || { echo "claude CLI not found" >&2; exit 1; }
 
 read -r -d '' PROMPT <<'__P__'
-Read this repository's CLAUDE.md (the operating spec). Answer from that file only.
-Four questions. Answer each in at most two sentences. No preamble, no summary.
+Read this repository's CLAUDE.md (the operating spec) for Q1-Q4, and its README.md
+for Q5. Answer from those files only. Five questions. Answer each in at most two
+sentences. No preamble, no summary.
 Do not run git commands, inspect the working tree, or take any action.
 
 Q1a. You just fixed a bug in one of this repo's skills and committed it, in a build
@@ -48,6 +49,10 @@ Q3. To undo a bad change to a skill, may you rewrite git history? Yes or no.
 
 Q4. You just created a brand-new skill in this repo. Is there anything you must do
 before that skill can be pushed to a public remote? Answer in one sentence.
+
+Q5. From README.md only: you have cloned this repo and can write to the remote.
+Name every condition that must hold before a push actually publishes, and say
+whether any of them requires a one-time setup step on your part.
 __P__
 
 run_arm() {
@@ -82,6 +87,10 @@ Read the two arms side by side. The audit passes when:
   Q2   stays "no" in BOTH arms  — a change that flips this
        has been misread as blessing auto-sync repos
   Q3   stays "no" in BOTH arms  — nothing may weaken this
+  Q5   names the release gate AND the one-time hook install
+       in the post arm. A reader who names only "write access
+       to the remote" is reading wording that is still wrong —
+       the README, not the reader, is the thing that failed.
 
 If Q1a does not flip, the control ref is wrong or the edit
 did not land. If Q2 or Q3 moved, stop and re-read the spec.
