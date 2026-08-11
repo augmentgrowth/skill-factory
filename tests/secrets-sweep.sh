@@ -65,6 +65,14 @@ CONTENT_RE="$CONTENT_RE|(api[_-]?key|secret|token|password|passwd)${Q}?[[:space:
 #                                 assume them.
 ALLOWLIST='^tests/test_release_gate\.py$|^tests/secrets-sweep\.sh$|^tests/credential-drill\.sh$'
 ALLOWLIST="$ALLOWLIST|^\.claude/skills/fable-codex/scripts/tests/run\.sh$"
+#   docs/verification/2026-08-11-lab-223-drills.md
+#                               — the record of the run that found the entry
+#                                 above, and whose first draft quoted the
+#                                 synthetic key verbatim. Redacted since, but
+#                                 the original blob stays in history, which is
+#                                 the whole point of a history sweep. Scoped to
+#                                 one dated, closed record.
+ALLOWLIST="$ALLOWLIST|^docs/verification/2026-08-11-lab-223-drills\.md$"
 
 # ------------------------------------------------------------------- sweep --
 
