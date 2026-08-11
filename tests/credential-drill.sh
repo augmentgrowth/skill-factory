@@ -64,10 +64,16 @@ git -C "$REPO" config user.email drill@example.invalid
 git -C "$REPO" config user.name "Credential Drill"
 
 if [ "$CONTROL" -eq 1 ]; then
-  echo "CONTROL MODE: removing .env coverage from .gitignore. The drill must fail."
+  echo "CONTROL MODE: breaking .gitignore AND planting the key in a tracked file."
+  echo "Both classes of check must fail."
   grep -v '^\.env' "$REPO/.gitignore" > "$REPO/.gitignore.new"
   mv "$REPO/.gitignore.new" "$REPO/.gitignore"
-  git -C "$REPO" commit --quiet -am "control: break the ignore rule"
+  # Two independent failure classes, because the drill's first version could
+  # pass the ignore checks while the key sat committed elsewhere. A control
+  # that only breaks .gitignore would never have exposed that.
+  printf 'debug notes\nkey we were testing with: %s\n' "$FAKE_KEY" > "$REPO/docs/notes-scratch.md"
+  git -C "$REPO" add -A
+  git -C "$REPO" commit --quiet -m "control: break the ignore rule and leak the key"
 fi
 
 echo
@@ -114,6 +120,24 @@ if git -C "$REPO" log --all --pretty=format: --name-only | grep -qE '(^|/)\.env$
   fail ".env reached history"
 else
   pass ".env never reached history"
+fi
+
+# The check the first version of this drill was missing. Ignoring `.env` is only
+# half the promise -- the other half is that the key does not end up in some
+# OTHER tracked file. Without this, the drill passed while the key sat committed
+# in plaintext in config.json, because every assertion happened to look
+# somewhere else.
+# This script is excluded because it necessarily contains the literal it is
+# searching for. That is the ONLY exclusion, and it is one path -- every other
+# tracked file in the clone is fair game.
+leaked_paths() {
+  git -C "$REPO" grep -lF "$FAKE_KEY" -- . ':!tests/credential-drill.sh' 2>/dev/null || true
+}
+
+if [ -z "$(leaked_paths)" ]; then
+  pass "the key is in no tracked file"
+else
+  fail "the key is committed in: $(leaked_paths | tr '\n' ' ')"
 fi
 
 if "$SRC/tests/secrets-sweep.sh" "$REPO" >"$WORK/sweep.log" 2>&1; then
@@ -173,10 +197,26 @@ __P__
     pass "nothing the session wrote is stageable as a .env"
   fi
 
-  if grep -rqF "$FAKE_KEY" "$REPO" --include='*.example' 2>/dev/null; then
-    fail "the key was written into a committed .example template"
+  # Commit whatever the session left behind, then apply the SAME two checks the
+  # mechanical half uses. Sweeping only before the session -- which is what the
+  # first version of this drill did -- means the one actor most likely to
+  # mishandle the key is the one actor never audited.
+  git -C "$REPO" add -A
+  # "nothing to commit" is the normal case -- the factory commits its own work,
+  # so this only catches anything it left loose.
+  git -C "$REPO" commit --quiet -m "drill: capture whatever the session wrote" >/dev/null 2>&1 || true
+
+  if [ -z "$(leaked_paths)" ]; then
+    pass "the session left the key in no tracked file"
   else
-    pass "no key in the .example template"
+    fail "the session committed the key into: $(leaked_paths | tr '\n' ' ')"
+  fi
+
+  if "$SRC/tests/secrets-sweep.sh" "$REPO" >"$WORK/sweep-post.log" 2>&1; then
+    pass "history sweep clean after the session's own commits"
+  else
+    fail "history sweep found something the session wrote (see below)"
+    sed 's/^/        /' "$WORK/sweep-post.log"
   fi
 fi
 

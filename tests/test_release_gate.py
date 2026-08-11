@@ -423,11 +423,21 @@ class PushEnforcement(GateFixture):
 
         This test asserts the exposure rather than the protection, on purpose.
         If a future change makes an uninstalled clone safe, this test fails and
-        the README's honesty caveat can come out with it. Until then it stops
-        the gap from being quietly forgotten.
+        the README's honesty caveat can come out with it.
+
+        It points hooksPath at an EMPTY directory rather than unsetting it. An
+        unset value falls through to the machine's global config, so on a
+        developer with a global husky hook this asserted the wrong thing — and
+        could fail for a reason that has nothing to do with the gate. Empty
+        means "no hook ran" hermetically.
+
+        Scope: this says nothing about server-side enforcement. It pins that no
+        LOCAL gate ran, which is the claim the README makes.
         """
         before = self.remote_head()
-        self.git("config", "--unset", "core.hooksPath")
+        empty_hooks = self.repo / "no-hooks"
+        empty_hooks.mkdir()
+        self.git("config", "core.hooksPath", "no-hooks")
         write(self.repo / "stray/secrets.txt", "oops\n")
         self.commit("stray")
         result = self.push()
@@ -435,10 +445,132 @@ class PushEnforcement(GateFixture):
             result.returncode, 0,
             "expected an unguarded push; if this now fails, the gap is closed",
         )
+        self.assertNotIn(
+            "release gate", (result.stderr + result.stdout).lower(),
+            "the gate ran despite no hook being installed",
+        )
         self.assertNotEqual(
             self.remote_head(), before,
             "unauthorized content reached the remote, as an uninstalled hook allows",
         )
+
+
+class SecretsSweep(unittest.TestCase):
+    """Pins that tests/secrets-sweep.sh can actually FAIL.
+
+    These controls were run by hand once and written into a dated verification
+    record, which is exactly the "verified once, never again" shape the drills
+    exist to replace. The sweep spends no model session, so nothing justified
+    leaving it out of the suite.
+
+    Each case names the evasion class it pins. The content cases matter most:
+    the first version of the sweep required a QUOTED value, so three genuine
+    credential shapes — every one of them the way a real .env is written —
+    passed CLEAN.
+    """
+
+    SWEEP = REPO_ROOT / "tests" / "secrets-sweep.sh"
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="sweep-test-")).resolve()
+        self.addCleanup(shutil.rmtree, self.tmp, True)
+        self.repo = self.tmp / "repo"
+        self.repo.mkdir()
+        for args in (
+            ("init", "--quiet", "--initial-branch=main"),
+            ("config", "user.email", "test@example.com"),
+            ("config", "user.name", "Test"),
+        ):
+            subprocess.run(("git", "-C", str(self.repo), *args), check=True)
+
+    def commit_files(self, files, message="fixture"):
+        for rel, text in files.items():
+            write(self.repo / rel, text)
+        subprocess.run(("git", "-C", str(self.repo), "add", "-Af"), check=True)
+        subprocess.run(
+            ("git", "-C", str(self.repo), "commit", "--quiet", "-m", message), check=True
+        )
+
+    def sweep(self):
+        return subprocess.run(
+            (str(self.SWEEP), str(self.repo)), capture_output=True, text=True
+        )
+
+    def assert_detects(self, label):
+        result = self.sweep()
+        self.assertEqual(
+            result.returncode, 1,
+            f"sweep reported clean on {label}\n{result.stdout}\n{result.stderr}",
+        )
+
+    def test_clean_repo_with_env_example_passes(self):
+        self.commit_files({
+            ".env.example": "ANTHROPIC_API_KEY=\nWORKSPACE_ID=\n",
+            "README.md": "# fixture\n",
+        })
+        result = self.sweep()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_secret_added_then_deleted_is_still_found(self):
+        """The class the tree-only scan misses and the whole reason for a sweep."""
+        self.commit_files({"leak.txt": "AKIA0987654321ZZZZZZ\n"}, "add")
+        subprocess.run(("git", "-C", str(self.repo), "rm", "--quiet", "leak.txt"), check=True)
+        subprocess.run(
+            ("git", "-C", str(self.repo), "commit", "--quiet", "-m", "remove"), check=True
+        )
+        self.assert_detects("a secret added then deleted")
+
+    def test_env_at_any_depth_is_found(self):
+        self.commit_files({"a/b/c/.env": "TOKEN=abc\n"})
+        self.assert_detects("a .env nested three directories deep")
+
+    def test_unquoted_uppercase_assignment_is_found(self):
+        """AWS_SECRET_ACCESS_KEY=... — unquoted and uppercase, as every .env writes it."""
+        self.commit_files(
+            {".env.example": "AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMIK7MDENGbPxRfiCYEXAMPLEKEY\n"}
+        )
+        self.assert_detects("an unquoted uppercase assignment")
+
+    def test_unquoted_yaml_password_is_found(self):
+        self.commit_files({"config.yml": "password: hunter2hunter2hunter2hunter2hunter2\n"})
+        self.assert_detects("an unquoted YAML password")
+
+    def test_shell_export_is_found(self):
+        self.commit_files({"setup.sh": "export DB_PASSWORD=s3cretV4lueThatIsQuiteLongIndeed99\n"})
+        self.assert_detects("an unquoted shell export")
+
+    def test_jwt_is_found(self):
+        self.commit_files(
+            {"t.js": 'const t="eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.sig";\n'}
+        )
+        self.assert_detects("a JWT")
+
+    def test_allowlist_is_path_scoped_not_pattern_scoped(self):
+        """A key at a non-allowlisted path is found even when its content is identical
+        to content that IS allowlisted elsewhere. Pins that the allowlist never
+        silences a pattern globally."""
+        secret = "AKIAABCDEFGHIJKLMNOP\n"
+        self.commit_files({"docs/notes.md": secret})
+        self.assert_detects("an allowlisted-content string at a non-allowlisted path")
+
+
+class ShellDrillSyntax(unittest.TestCase):
+    """`bash -n` over every shell drill.
+
+    The drills are excluded from the suite because their behavioral halves spend
+    real model sessions, but that left them with no guard at all — a typo would
+    surface only when someone ran one by hand, weeks later.
+    """
+
+    def test_every_shell_script_parses(self):
+        scripts = sorted((REPO_ROOT / "tests").glob("*.sh")) + [REPO_ROOT / "githooks/pre-push"]
+        self.assertGreaterEqual(len(scripts), 4, "expected the drills to be discovered")
+        for script in scripts:
+            with self.subTest(script=script.name):
+                result = subprocess.run(
+                    ("bash", "-n", str(script)), capture_output=True, text=True
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
 
 
 if __name__ == "__main__":

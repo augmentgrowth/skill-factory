@@ -17,7 +17,11 @@
 #
 # Exit:   0 clean, 1 findings, 2 usage/environment error
 
-set -u
+# pipefail is load-bearing, not hygiene. Without it a git failure mid-sweep
+# yields a short blob list and the script still prints CLEAN -- a broken scan
+# and a clean repo would be indistinguishable, which is the one outcome a
+# fail-closed check must never allow.
+set -u -o pipefail
 
 REPO="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 cd "$REPO" 2>/dev/null || { echo "not a directory: $REPO" >&2; exit 2; }
@@ -30,21 +34,40 @@ trap 'rm -rf "$WORK"' EXIT
 #
 # Filenames that should never be committed at any depth. `.env.example` is the
 # documented convention and is excluded below, by name, at the match site.
-FILENAME_RE='(^|/)\.env($|\.)|\.(pem|p12|pfx|key|keystore|jks)$|(^|/)id_(rsa|dsa|ecdsa|ed25519)$|(^|/)credentials(\.json)?$|(^|/)\.npmrc$|(^|/)\.pypirc$'
+FILENAME_RE='(^|/)\.env($|\.)|\.(pem|p12|pfx|key|keystore|jks|ppk|p8)$|(^|/)id_(rsa|dsa|ecdsa|ed25519)$|(^|/)credentials(\.json)?$|(^|/)\.npmrc$|(^|/)\.pypirc$|(^|/)\.netrc$|(^|/)\.git-credentials$'
 
 # Content shapes. Provider prefixes first (high confidence), then the generic
 # assignment shape (lower confidence, kept anyway -- see "deliberately noisy").
 CONTENT_RE='-----BEGIN [A-Z ]*PRIVATE KEY-----'
 CONTENT_RE="$CONTENT_RE|sk-ant-api[0-9]{2}-[A-Za-z0-9_-]{24,}"
-CONTENT_RE="$CONTENT_RE|sk-[A-Za-z0-9]{32,}"
+CONTENT_RE="$CONTENT_RE|sk-(proj-)?[A-Za-z0-9_-]{32,}"
 CONTENT_RE="$CONTENT_RE|(ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{30,}"
 CONTENT_RE="$CONTENT_RE|github_pat_[A-Za-z0-9_]{40,}"
 CONTENT_RE="$CONTENT_RE|AKIA[0-9A-Z]{16}"
 CONTENT_RE="$CONTENT_RE|xox[baprs]-[A-Za-z0-9-]{12,}"
 CONTENT_RE="$CONTENT_RE|AIza[0-9A-Za-z_-]{35}"
 CONTENT_RE="$CONTENT_RE|glpat-[A-Za-z0-9_-]{20,}"
-Q=$'["\']'   # a quote character, either flavor
-CONTENT_RE="$CONTENT_RE|(api[_-]?key|secret|token|password|passwd)${Q}?[[:space:]]*[:=][[:space:]]*${Q}[A-Za-z0-9/+_-]{24,}${Q}"
+CONTENT_RE="$CONTENT_RE|eyJ[A-Za-z0-9_-]{8,}\.eyJ[A-Za-z0-9_-]{8,}\."
+CONTENT_RE="$CONTENT_RE|[Aa]uthorization:[[:space:]]*(Bearer|Basic|token)[[:space:]]+[A-Za-z0-9._~+/=-]{16,}"
+
+# The generic assignment shape. QUOTES ARE OPTIONAL ON BOTH SIDES, and that is
+# the whole point of this line: requiring them is what let three genuine
+# credentials through a CLEAN verdict --
+#
+#   AWS_SECRET_ACCESS_KEY=wJalr...        (unquoted, as every .env file writes it)
+#   password: hunter2...                  (unquoted YAML)
+#   export DB_PASSWORD=s3cret...          (unquoted shell)
+#
+# The value class admits . and = so base64 padding and dotted tokens match.
+Q=$'["\']?'   # an optional quote, either flavor
+CONTENT_RE="$CONTENT_RE|(api[_-]?key|secret([_-]?access[_-]?key)?|token|password|passwd|passphrase)${Q}[[:space:]]*[:=][[:space:]]*${Q}[A-Za-z0-9/+_.=-]{20,}"
+
+# NOT scanned for, deliberately: bare high-entropy hex/base64 runs with no
+# assignment context. A 40-char hex run is also every git SHA, and this repo's
+# docs and commit messages are full of them -- that pattern would drown the
+# real signal and train whoever runs this to ignore it. The assignment shapes
+# above are how a credential actually appears in a file. Stated here so the
+# boundary is a decision on the record rather than an oversight.
 
 # Paths whose findings are known-benign. Path-scoped ONLY: a pattern is never
 # weakened to quiet a file. Anchored full paths, one per line.
@@ -87,10 +110,22 @@ ALLOWLIST="$ALLOWLIST|^docs/verification/2026-08-11-lab-223-drills\.md$"
 #
 # Walking every commit's tree is O(commits) and slower on a large repo; that is
 # the right trade for a check whose whole job is not to miss things.
+#
+# -z plus core.quotePath=false is not pedantry: without it git quotes paths
+# containing non-ASCII or control characters, and awk's default whitespace
+# splitting mangles paths containing runs of spaces. Either one turns a
+# forbidden path into an unrecognizable string that the filename rules no
+# longer match -- an evasion, not a cosmetic bug.
+git rev-list --all > "$WORK/commits" || { echo "sweep: FAILED to list commits" >&2; exit 2; }
+
 : > "$WORK/named"
-for commit in $(git rev-list --all); do
-  git ls-tree -r "$commit" | awk '$2=="blob" {sha=$3; $1=$2=$3=""; sub(/^[ \t]+/,""); print sha "\t" $0}'
-done | sort -u > "$WORK/named"
+while read -r commit; do
+  git -c core.quotePath=false ls-tree -r -z "$commit" \
+    || { echo "sweep: FAILED to read tree $commit" >&2; exit 2; }
+done < "$WORK/commits" \
+  | tr '\0' '\n' \
+  | awk -F'\t' '{ split($1, m, " "); if (m[2] == "blob") print m[3] "\t" $2 }' \
+  | sort -u > "$WORK/named"
 
 if [ ! -s "$WORK/named" ]; then
   echo "sweep: no blobs in history -- nothing to scan"
@@ -120,6 +155,12 @@ while IFS=$'\t' read -r sha path; do
     continue
   fi
 
+  scanned=$((scanned + 1))
+
+  # `.env.example` is exempt from the FILENAME rule only -- it is the documented
+  # convention and must be committable. It is still content-scanned below,
+  # because "the template file" is exactly where someone pastes a real key by
+  # accident.
   base="${path##*/}"
   if [ "$base" != ".env.example" ] && printf '%s' "$path" | grep -Eq "$FILENAME_RE"; then
     report "filename" "$sha" "$path" "path matches a never-commit filename shape"
@@ -130,8 +171,12 @@ while IFS=$'\t' read -r sha path; do
   # file is still a key. grep -a keeps it from bailing out.
   # -e is load-bearing: the private-key pattern starts with a dash, which grep
   # would otherwise read as a flag.
-  hit=$(git cat-file blob "$sha" 2>/dev/null | grep -aEom1 -e "$CONTENT_RE")
-  scanned=$((scanned + 1))
+  blob=$(git cat-file blob "$sha" 2>/dev/null) \
+    || { echo "sweep: FAILED to read blob $sha ($path)" >&2; exit 2; }
+  # -i is load-bearing. Environment variables are UPPERCASE by convention --
+  # AWS_SECRET_ACCESS_KEY, DB_PASSWORD -- so a case-sensitive keyword list
+  # misses the single most common way a credential is written down.
+  hit=$(printf '%s' "$blob" | grep -aiEom1 -e "$CONTENT_RE") || true
   if [ -n "$hit" ]; then
     # Never print the full match -- the sweep's own output would then carry the
     # secret into a log or a transcript.

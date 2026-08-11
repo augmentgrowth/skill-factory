@@ -127,18 +127,24 @@ if [ -z "$built" ]; then
 else
   echo "produced: $built"
 
-  tracked=$(git -C "$REPO" ls-files ".claude/skills/$built" | wc -l | tr -d ' ')
-  if [ "$tracked" -gt 0 ]; then
-    echo "committed: yes ($tracked file(s) tracked)"
+  # ls-tree HEAD, not ls-files. ls-files reads the INDEX, so a skill that was
+  # merely `git add`ed and never committed counted as committed -- the drill
+  # would report a passing time for a run that never finished the one thing the
+  # factory promises. Same reason cases/baseline is checked in the commit
+  # rather than on disk.
+  committed=$(git -C "$REPO" ls-tree -r --name-only HEAD -- ".claude/skills/$built" | wc -l | tr -d ' ')
+  if [ "$committed" -gt 0 ] && git -C "$REPO" cat-file -e "HEAD:.claude/skills/$built/SKILL.md" 2>/dev/null; then
+    echo "committed: yes ($committed file(s) in HEAD)"
   else
-    echo "committed: NO -- the skill exists but was never committed"
+    staged=$(git -C "$REPO" ls-files ".claude/skills/$built" | wc -l | tr -d ' ')
+    echo "committed: NO -- skill exists but SKILL.md is not in HEAD (staged: $staged)"
     fail=1
   fi
 
-  if [ -d "$REPO/.claude/skills/$built/cases/baseline" ]; then
-    echo "baseline:  present"
+  if git -C "$REPO" ls-tree -r --name-only HEAD -- ".claude/skills/$built/cases/baseline" | grep -q .; then
+    echo "baseline:  present in HEAD"
   else
-    echo "baseline:  MISSING -- cases/baseline/ is the factory's own contract"
+    echo "baseline:  MISSING from HEAD -- cases/baseline/ is the factory's own contract"
     fail=1
   fi
 fi
