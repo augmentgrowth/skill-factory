@@ -57,12 +57,16 @@ Where the proposal and case live depends on the tier:
     `git -C <repo> add docs/proposals/<YYYY-MM-DD>-<skill>-<slug>.md` then
     `Proposal for <skill>: <slug> (static — not self-edited)`. A proposal left loose in a busy repo
     is one cleanup away from gone, and nothing in the queue will notice it is missing.
-  - **Do not save it into the repo when** the repo is not yours to write to (a background run that
-    hit stray paths, or another session's branch), **or when the repo publishes** — a public remote,
-    or an auto-sync cron that turns a save into a push. A proposal quotes real paths and machine
-    detail, and this is the one save in the protocol that happens before any preflight has run.
-    In those cases leave the file where it is, tell the builder its location in plain language, and
-    say plainly that it is not saved permanently yet.
+  - **When the repo publishes, redirect the save — do not skip it.** A proposal quotes real paths
+    and machine detail, so it must never land in a repo that publishes (a public remote, or an
+    auto-sync cron). Write it to the private hub's proposal queue instead, at the same
+    `docs/proposals/<YYYY-MM-DD>-<skill>-<slug>.md` path, and tell the builder in plain language
+    where it went. Leaving it unsaved was the old remedy and it was wrong: the proposal is the only
+    failure record a static skill ever gets, and a loose file is one cleanup away from gone.
+  - **Do not save it at all when** the repo is not yours to write to (a background run that hit
+    stray paths, or another session's branch) and no private hub is reachable. Leave the file where
+    it is, tell the builder its location, and say plainly that it is not saved permanently yet.
+    This is the one save in the protocol that happens before any preflight has run.
 - **Personal-tier skill carrying `static: true`:** if a case was already captured — you got here
   from the queue — write the terminal marker from Step 7 and commit it alone
   (`Mark case terminal for <skill>: <slug> (static — proposal written)`) so the proposal is not
@@ -162,9 +166,15 @@ commit containing all four:
 - `cases/<YYYY-MM-DD>-<slug>/.annealed` — a one-line marker (`<ISO date> green`) that takes this
   case out of the queue. **No marker, no exit:** an unmarked case is re-annealed forever.
 
-**One anneal = one commit.** Do not tag — a successful anneal is not a known-good milestone (tags
-are set only at creation-done and graduation). Release the lock. Report a one-line plain-language
-summary. Done.
+**One anneal = one commit.** Release the lock. Report a one-line plain-language summary. Done.
+
+**Tagging.** A successful anneal is still **not** a `known-good` milestone — that tag means a state
+the builder accepted, and nobody judged this one. But a *gated* change (see the spec's review gate:
+a new skill's first release, a behavior/judgment rewrite, graduation) is bracketed by
+`<skill>/rollback-<n>` before and `<skill>/review-<n>` on the shipped candidate, so the output
+receipt always has a rollback target. An ordinary anneal is not gated and gets neither. This
+reverses an earlier blanket "do not tag" rule — do not restore it: without the bracket tags, a
+shipped-but-rejected change has nothing to restore from.
 
 ## Step 7 — On exhaustion (3 red) or uncertainty at any point
 
@@ -184,7 +194,8 @@ the folder:
    as always. Release the lock if you hold one (an escalation straight out of Step 2 never took it).
 4. Escalate in plain language: what failed, what you tried across the attempts, and the options now.
    No git vocabulary reaches the builder. In a background run there is no one to escalate *to*
-   live — leave the plain-language account in the commit body and stop.
+   live — leave the plain-language account in the commit body, **push it**, and stop. An escalation
+   nobody can see is not an escalation; pushing is how a background run reaches the builder at all.
 
 ## The lock protocol
 
@@ -243,7 +254,9 @@ anneal queue", or just noticing a backlog.
 - **Environmental failures are skipped**, not annealed.
 - **Escalate** when the fix is uncertain or would reach outside the folder — except in a background
   run, which aborts and requeues instead of asking.
-- **Never push. Never rewrite history.** Commits are local-only.
+- **Never rewrite history.** Push per the spec's silent-git contract: when the build home's remote
+  is yours, the anneal commit ships. Rollback stays a path-scoped restore committed as a NEW
+  commit, so pushing can never corrupt the transaction.
 
 ## Audit vocabulary (translate git, never expose it)
 
