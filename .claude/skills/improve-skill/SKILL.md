@@ -182,16 +182,31 @@ If the loop exhausts, or at any point you are unsure the fix is correct or it wo
 the folder:
 
 1. **Path-scoped restore** the skill folder to its last good state — the last good commit, or the
-   latest `<skill>/known-good-<n>` tag when one exists and the recent commits are suspect (a skill
-   born in a hub build home may never have been tagged; the commit path is the normal case):
-   `git -C <repo> checkout <ref> -- <skill-folder>` (or
+   latest `<skill>/rollback-<n>` or `<skill>/known-good-<n>` tag when one exists and the recent
+   commits are suspect (a skill born in a hub build home may never have been tagged; the commit
+   path is the normal case): `git -C <repo> checkout <ref> -- <skill-folder>` (or
    `git -C <repo> restore --source=<ref> -- <skill-folder>`). Folder only. **Repo HEAD never
-   moves**, and the Step 3 case commit stays intact — a path-scoped restore rewrites only files the
-   old state knew about, so the case directory survives in place.
+   moves.**
+
+   **A restore alone is not a rollback.** Both forms write only the paths that exist in `<ref>`;
+   neither removes a path that exists now but did not exist then. That is what protects the case
+   directory — and it is also what leaves every file your failed attempts created sitting in the
+   folder, about to be committed as part of "the restore." A skill that picks up a `scripts/` folder
+   this way is silently reclassified as script-backed. So:
+
+   - **Track what the attempts created.** Note every path you add during Steps 5–6, as you add it.
+   - **Remove that residue** after the restore — untracked files included, since no restore form
+     touches them.
+   - **Exclude the active case directory** from the removal. It was created during this same
+     transaction and is otherwise indistinguishable from residue.
+   - **Assert before committing:** `cases/<YYYY-MM-DD>-<slug>/` still holds `input.md`,
+     `expected.md`, and the marker below. The case commit is sacred; nothing else checks it.
 2. Write the terminal marker `cases/<YYYY-MM-DD>-<slug>/.annealed` — `<ISO date> escalated: <one
    line on why>` — so the queue does not re-run a case a human now owns.
 3. Commit the restore **plus the marker** as a **new** commit (never rewrite history), path-scoped
-   as always. Release the lock if you hold one (an escalation straight out of Step 2 never took it).
+   as always. Name the removed residue in the commit body — a silent deletion is indistinguishable
+   from a bug later. Never restage the Step 3 case commit. Release the lock if you hold one (an
+   escalation straight out of Step 2 never took it).
 4. Escalate in plain language: what failed, what you tried across the attempts, and the options now.
    No git vocabulary reaches the builder. In a background run there is no one to escalate *to*
    live — leave the plain-language account in the commit body, **push it**, and stop. An escalation
@@ -280,6 +295,10 @@ skip the git steps with a plain one-line notice, and note the retrofit for when 
 - **Replay by explicit invocation, not the `/` menu.** A skill edited (or newly created) mid-session
   may not hot-load into the `/` menu; replay reliably by naming the skill or pointing the agent at
   its `SKILL.md`.
+- **A path-scoped restore does not delete.** `git checkout <ref> -- <path>` and
+  `git restore --source=<ref> -- <path>` write only what `<ref>` contains; anything created since
+  survives. That is why the case directory is safe — and why failed-attempt files are not. Remove
+  attempt residue explicitly or the "restore" commits the wreckage along with the rollback.
 - **The case commit is sacred.** Steps 3 and 7 must never stage or revert it together with the fix —
   it is its own commit precisely so a rollback keeps the fixture.
 - **Where you are standing is not where the skill lives.** A skill served through a link resolves
