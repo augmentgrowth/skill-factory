@@ -35,10 +35,18 @@ For a script-backed skill, run the checklist in `references/script-efficiency-re
 against every script (it is not a sub-agent — you read it and apply it here). Rank each finding
 CRITICAL / HIGH / MEDIUM / LOW, each with location, issue, why it matters, and a concrete fix.
 
-- **Any CRITICAL finding BLOCKS graduation.** State plainly that graduation is blocked, list the exact
-  fixes needed, and stop until they land (route the fix through `improve-skill` or a direct edit, then
-  re-run this step). Example: a seeded N+1 loop calling the API once per item is CRITICAL — blocked
-  with the fix "replace the per-item loop with one batched call."
+- **Any CRITICAL finding BLOCKS graduation — and the fix is yours, not the builder's.** Land the fix
+  yourself (through `improve-skill` or a direct edit), re-run this step, and continue when it comes
+  back clean. Tell the builder plainly that you are fixing something before graduating; never hand
+  them the finding as a decision. Example: a seeded N+1 loop calling the API once per item is
+  CRITICAL — fix it to one batched call, re-run, proceed.
+- **Why this stop survives the review gate.** Graduation is a gated change, so the builder reviews
+  its *output* — and output review cannot observe quota exhaustion, a rate-limit ban, or a fetch
+  that silently truncates. CRITICAL names exactly those properties. Routing it to the builder would
+  hand a technical judgment to the one reviewer structurally unable to make it, so this gate stays
+  machine-to-machine. It is not an exception to "ship it, then review the output"; it is a
+  correctness check that runs before there is anything worth reviewing. Build-time review already
+  fixes every CRITICAL, so one surviving to here is a real defect, not a style disagreement.
 - HIGH / MEDIUM / LOW are reported, not blocking. The builder decides.
 
 ## Step 3 — Optional eval gate (offered, never required)
@@ -76,10 +84,19 @@ names or pasted values.
 
 ## Step 5 — Build home stays system of record
 
-The full git history lives in the skill's build home, not the installed copy. Add the graduation known-good
-tag `<skill>/known-good-<n>` (stage the skill folder by explicit path). The installed copy is a copy:
-it does not auto-update. Improvements flow back through the build home — anneal or edit there via
-`improve-skill`, then re-graduate to refresh the installed copy.
+The full git history lives in the skill's build home, not the installed copy. The installed copy is
+a copy: it does not auto-update. Improvements flow back through the build home — anneal or edit
+there via `improve-skill`, then re-graduate to refresh the installed copy.
+
+Graduation is a gated change, so bracket it (stage the skill folder by explicit path throughout):
+`<skill>/rollback-<n>` on the last accepted state before graduating, `<skill>/review-<n>` on the
+graduated candidate. Push the branch and both tags together. Then hand the builder the output
+receipt. Add `<skill>/known-good-<n>` only once they accept.
+
+**A rejected graduation needs two undos, not one.** Restore the build home from the rollback tag
+*and* reinstall the personal copy from the restored version. The installed copy is frozen — a
+build-home-only restore leaves the rejected version live wherever it was graduated to, which is the
+one place the builder actually uses it.
 
 ## Step 6 — Team sharing (deferred)
 
