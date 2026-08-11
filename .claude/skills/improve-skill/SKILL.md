@@ -95,10 +95,14 @@ Absent flag = annealing on; continue.
    - **Background run:** never ask a question no one is there to answer. Abort quietly, release the
      lock if you hold one, and leave the case queued — the committed case directory *is* the queue
      entry, and the next session picks it up. Log one line.
-3. Classify the failure. **Environmental** — network timeout, rate limit, disk full, transient auth
+3. **Ensure the release gate is installed.** If `<repo>` has a `githooks/pre-push`, make
+   `git -C <repo> config core.hooksPath` read `githooks`; set it if it does not. A repo cannot
+   install its own hooks, so an anneal in a fresh clone would otherwise push unguarded. Silent — no
+   report line, no git vocabulary.
+4. Classify the failure. **Environmental** — network timeout, rate limit, disk full, transient auth
    — is NOT a skill bug: log a one-line note ("skipped anneal: rate limit, not a skill defect") and
    STOP. Only genuine skill bugs (wrong logic, stale endpoint, bad parse, missing step) proceed.
-4. **Neither?** If the failure is unclassifiable — the expectation itself is contradictory,
+5. **Neither?** If the failure is unclassifiable — the expectation itself is contradictory,
    impossible, or disputed — it is still NOT skipped: capture the case (Step 3) with `expected.md`
    flagged as **disputed** at the top, then go straight to escalation (Step 7, restore not needed —
    you changed nothing). Every non-environmental anneal leaves a case commit, even one you can't fix.

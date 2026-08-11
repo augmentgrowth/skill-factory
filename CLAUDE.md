@@ -74,9 +74,15 @@ git-tracked history from birth.
   public template you cannot push to (a stranger's clone of this repo), commit locally only and say
   so plainly once. Pushing is authorized per release by the release gate, not by write access
   alone: `scripts/release-gate.py --release`, enforced on every push by `githooks/pre-push`.
-  **Install it once per clone — `git config core.hooksPath githooks`.** A gate nothing invokes is
-  documentation. Running the script by hand is a *diagnostic*: it exits non-zero even when clean, so
-  `release-gate.py && git push` can never stand in for the hook.
+  A gate nothing invokes is documentation. Running the script by hand is a *diagnostic*: it exits
+  non-zero even when clean, so `release-gate.py && git push` can never stand in for the hook.
+- **Install the hook yourself, in preflight.** Nothing inside a git repo can set its own
+  `core.hooksPath`, so a fresh clone starts unguarded. That install is YOUR job, not a setup step
+  left to the builder: whenever a build home contains `githooks/pre-push`, silently ensure
+  `core.hooksPath` is `githooks` before any git work. Same posture as the identity check — no
+  announcement, no git vocabulary. **The residual is real and must not be papered over:** a clone
+  that nobody ever drives through the factory stays unguarded, which is why `README.md` states the
+  install as a plain command for anyone who pushes by hand.
 - **Never rewrite history.** Rollback is a path-scoped restore committed as a *new* commit. Repo
   HEAD never moves, and no published commit is ever amended, rebased, or force-pushed.
 - **Per-skill tags.** `<skill>/rollback-<n>` marks the last accepted state before a gated change;

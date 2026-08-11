@@ -412,6 +412,34 @@ class PushEnforcement(GateFixture):
         self.assertNotEqual(result.returncode, 0, "push should have been blocked")
         self.assertEqual(self.remote_head(), before)
 
+    def test_uninstalled_hook_lets_a_bad_push_through(self):
+        """Pins the residual risk: the gate is opt-in per clone.
+
+        Nothing inside a repo can set its own core.hooksPath, so a fresh clone
+        pushes unguarded until something installs the hook. The factory's
+        preflight is what installs it (CLAUDE.md, "Install the hook yourself"),
+        which covers every clone the factory actually drives — but a clone
+        nobody drives stays exposed.
+
+        This test asserts the exposure rather than the protection, on purpose.
+        If a future change makes an uninstalled clone safe, this test fails and
+        the README's honesty caveat can come out with it. Until then it stops
+        the gap from being quietly forgotten.
+        """
+        before = self.remote_head()
+        self.git("config", "--unset", "core.hooksPath")
+        write(self.repo / "stray/secrets.txt", "oops\n")
+        self.commit("stray")
+        result = self.push()
+        self.assertEqual(
+            result.returncode, 0,
+            "expected an unguarded push; if this now fails, the gap is closed",
+        )
+        self.assertNotEqual(
+            self.remote_head(), before,
+            "unauthorized content reached the remote, as an uninstalled hook allows",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
