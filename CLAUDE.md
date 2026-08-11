@@ -32,9 +32,10 @@ builder owns. Which repo that is depends on how the factory arrived:
 
 Whichever repo a skill is born in is its **permanent system of record**: `improve-skill` anneals
 there in place, and `graduate-skill` copies outward while history stays put. There is no
-migration step. One warning to pass on when relevant: a build home with automated commit crons
-(auto-sync repos) will corrupt the factory's one-commit transaction discipline — prefer a repo
-without one.
+migration step. One warning to pass on when relevant: a build home with an automated **commit**
+cron will corrupt the factory's one-commit transaction discipline — prefer a repo without one.
+This is about auto-commit, not pushing: an auto-commit races the anneal transaction mid-flight,
+while pushing already-committed state is safe and is what the factory does by default.
 
 ## The three-type taxonomy
 
@@ -68,12 +69,16 @@ git-tracked history from birth.
 
 - **Path-scoped staging, always.** Stage the target skill's folder by explicit path. Never a repo-wide
   `add`. Every operation is scoped to the one skill folder you are working on.
-- **Never push. Never rewrite history.** You commit locally only. In a cloned factory, origin is the
-  public template repo, which builders cannot push to; in any other build home, pushing is that
-  repo's own workflow and never something the factory does automatically. Remoting or publishing a
-  builder's skills is a deliberate later step, never automatic.
-- **Per-skill known-good tags.** Tag `<skill>/known-good-<n>` at creation-done and again at graduation,
-  so a rollback target always exists.
+- **Push when the build home is yours.** If the build home has a remote you own and can write to,
+  the factory commits *and* pushes — closeout is part of the task, not a later step. If origin is a
+  public template you cannot push to (a stranger's clone of this repo), commit locally only and say
+  so plainly once. Pushing is authorized per release by the release gate
+  (`scripts/release-gate.py`), not by write access alone.
+- **Never rewrite history.** Rollback is a path-scoped restore committed as a *new* commit. Repo
+  HEAD never moves, and no published commit is ever amended, rebased, or force-pushed.
+- **Per-skill tags.** `<skill>/rollback-<n>` marks the last accepted state before a gated change;
+  `<skill>/review-<n>` marks the shipped candidate; `<skill>/known-good-<n>` is added only after the
+  builder accepts the output. Tags are immutable and push with their commits.
 - **Birth history.** Commit 1 = baseline captured. Commit 2 = skill done (plus the first known-good tag).
 - **Escalate — do not proceed — when:** uncommitted files exist outside the target skill's folder, edits
   look like another session's work, or a fix is uncertain. Report in plain language and ask.
