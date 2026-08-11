@@ -32,7 +32,7 @@ cd skill-factory
 # open the folder in Claude Code and say: help me build a skill
 ```
 
-That's the whole setup — under 10 minutes on a fresh machine, most of it the clone. Your clone is local-only: the factory agent commits your skills to your local git history and never pushes anywhere.
+That's the whole setup — under 10 minutes on a fresh machine, most of it the clone. Your clone commits your skills to your own local git history. It pushes only when the remote is yours and you can write to it; if you cloned this template and cannot push to it, everything stays local and the factory tells you so once.
 
 ### Install as a plugin (the skills, everywhere)
 

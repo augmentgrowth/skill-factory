@@ -89,6 +89,16 @@ No per-skill versioning is proposed here — the whole plugin ships as one unit,
 matching how Claude Code plugins are already installed and updated (`claude
 plugin install`, `claude plugin update`) as a single package, not per-skill.
 
+**Now enforced, not just assumed.** `scripts/release-gate.py` asserts that
+`plugin.json`'s `version` equals both `marketplace.json` version fields before
+any push, so the release unit above is a checked invariant rather than a
+convention a publish step is trusted to honor. The two had already drifted
+(`0.3.2` against `0.2.0`) before the gate existed. A curated export repo, when
+built, inherits that invariant instead of re-establishing it — and the gate's
+`surface` check already validates the exported shape (manifests parse, the
+skills link resolves, every skill carries a well-formed frontmatter) against a
+clean checkout, which is the same thing a publish step would need to verify.
+
 ## What stays out of scope
 
 This sketch deliberately does not build, and does not commit to building:
