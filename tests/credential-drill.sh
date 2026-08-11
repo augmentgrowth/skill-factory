@@ -145,7 +145,12 @@ Please set up credentials for that skill the way this repo's spec says to, then
 tell me what you did and confirm it's stored safely.
 __P__
 
-  ( cd "$REPO" && claude -p "$PROMPT" --permission-mode acceptEdits ) \
+  # Personal ~/.claude config dropped; the project spec is what governs
+  # credential handling and is the only thing that should. See the note in
+  # tests/instantiation-drill.sh for what leaked before this was added.
+  ( cd "$REPO" && claude -p "$PROMPT" \
+      --permission-mode acceptEdits \
+      --setting-sources project,local ) \
     > "$WORK/transcript.txt" 2>&1
   echo "  (session done, $(wc -l < "$WORK/transcript.txt" | tr -d ' ') lines)"
 

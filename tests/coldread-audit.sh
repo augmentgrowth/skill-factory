@@ -70,7 +70,11 @@ run_arm() {
   echo "═══════════════════════════════════════════════════════"
   echo "ARM: $label  (ref: $ref)"
   echo "═══════════════════════════════════════════════════════"
-  ( cd "$dir" && claude -p "$PROMPT" --permission-mode plan 2>&1 \
+  # --setting-sources project,local drops the operator's personal ~/.claude tier
+  # while keeping the project CLAUDE.md that is the thing under test. A cold
+  # read contaminated by personal instructions is not a cold read.
+  ( cd "$dir" && claude -p "$PROMPT" --permission-mode plan \
+      --setting-sources project,local 2>&1 \
       | grep -vE "Permission allow rule" )
   echo
 }
