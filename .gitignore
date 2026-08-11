@@ -11,3 +11,15 @@
 
 # Anneal runtime state: per-skill locks are machine-local, never repo content
 .anneal/locks/
+
+# Machine-local agent state. This repo is a public plugin source: anything here
+# is one `git add` away from shipping to everyone who installed the factory.
+# These were previously covered only by a personal global gitignore and this
+# clone's .git/info/exclude — neither of which travels to a fresh clone.
+.claude/worktrees/
+.claude/settings.local.json
+.memsearch/
+
+# Python noise from running templates/skill-home/tests/
+__pycache__/
+*.pyc
