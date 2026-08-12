@@ -45,7 +45,13 @@ trap 'rm -rf "$WORK"' EXIT
 
 # Synthetic, shaped like the real thing so the scanners have something to bite.
 # "FAKE" repeated is the tell — no real key looks like this.
-FAKE_KEY="sk-ant-api03-FAKEFAKEFAKEFAKEFAKEFAKEFAKEFAKEFAKEFAKE"
+#
+# Assembled at runtime rather than written as one literal, so this file contains
+# no contiguous key-shaped string and needs no entry in the sweep's exemption
+# list. That matters: a path-level exemption would have hidden a REAL key pasted
+# into this file, and `tests/` is an authorized publish path, so the release
+# gate would then have shipped it.
+FAKE_KEY="sk-ant-api03-$(printf 'FAKE%.0s' $(seq 1 10))"
 SKILL="pretend-reporter"
 
 failures=0
@@ -191,7 +197,10 @@ __P__
   fi
 
   # Whatever the session wrote, the key must not have become committable.
-  if git -C "$REPO" status --porcelain | grep -qE '\.env$'; then
+  # -uall, not the default -unormal: the default collapses a wholly-untracked
+  # directory to `dir/`, so a .env inside a new folder would never appear in the
+  # output this check greps.
+  if git -C "$REPO" status --porcelain -uall | grep -qE '\.env$'; then
     fail "the session left a .env visible to git"
   else
     pass "nothing the session wrote is stageable as a .env"

@@ -8,6 +8,12 @@
 # every ref, so a secret that lived for one commit two months ago is still
 # found.
 #
+# COVERAGE BOUNDARY, stated because "the whole history" overclaims: reachable
+# from a ref. Objects reachable only from the reflog, a dropped stash, or a
+# dangling commit are NOT scanned. Those are local-only and never pushed, so
+# they cannot leak through a release -- but if you are auditing a machine rather
+# than a release, `git fsck --lost-found` is the other half again.
+#
 # Deliberately noisy. A sweep that under-reports is worse than one that makes
 # you look at something benign, so the patterns are broad and the only way to
 # quiet a finding is to allowlist its *path* -- never to weaken a pattern.
@@ -87,33 +93,66 @@ CONTENT_RE="$CONTENT_RE|(api[_-]?key|secret([_-]?access[_-]?key)?|token|password
 # above are how a credential actually appears in a file. Stated here so the
 # boundary is a decision on the record rather than an oversight.
 
-# Paths whose findings are known-benign. Path-scoped ONLY: a pattern is never
-# weakened to quiet a file. Anchored full paths, one per line.
+# Known-synthetic VALUES, not paths.
 #
-#   tests/test_release_gate.py  — fixture secrets, deliberately key-shaped: the
-#                                 add-then-delete bypass test needs a string
-#                                 that a scanner would flag.
-#   tests/secrets-sweep.sh      — this file. It contains the patterns.
-#   .claude/skills/fable-codex/scripts/tests/run.sh
-#                               — HISTORY ONLY; the skill was moved out of this
-#                                 repo and no longer exists at HEAD. Its
-#                                 credential-scrubbing test asserts on a
-#                                 deliberately synthetic AWS key,
-#                                 AKIAABCDEFGHIJKLMNOP -- sequential alphabet,
-#                                 never a real credential. Verified 2026-08-11;
-#                                 this was the sweep's first real finding and
-#                                 the reason to read findings rather than
-#                                 assume them.
-ALLOWLIST='^tests/test_release_gate\.py$|^tests/secrets-sweep\.sh$|^tests/credential-drill\.sh$'
-ALLOWLIST="$ALLOWLIST|^\.claude/skills/fable-codex/scripts/tests/run\.sh$"
-#   docs/verification/2026-08-11-lab-223-drills.md
-#                               — the record of the run that found the entry
-#                                 above, and whose first draft quoted the
-#                                 synthetic key verbatim. Redacted since, but
-#                                 the original blob stays in history, which is
-#                                 the whole point of a history sweep. Scoped to
-#                                 one dated, closed record.
-ALLOWLIST="$ALLOWLIST|^docs/verification/2026-08-11-lab-223-drills\.md$"
+# This used to be a path allowlist, and that was the wrong primitive: exempting
+# tests/credential-drill.sh meant a REAL key pasted into that file was invisible,
+# and `tests/` is an authorized publish path, so the release gate would have
+# shipped it. Blinding a whole file to protect one fixture string trades a large
+# hole for a small convenience.
+#
+# Exempting the exact literal instead keeps every other secret in those same
+# files in scope.
+#
+# THE RULE THAT MAKES THIS WORK: a value cannot be both exempt here and used to
+# prove detection. Exempting every synthetic key in the suite broke every
+# detection test at once, which is the correct failure -- the tests were then
+# asserting that the sweep finds strings it had just been told to ignore.
+#
+# So the two roles are kept disjoint:
+#
+#   this list          values that physically exist in this repo's files or
+#                      history, and are known-synthetic
+#   the test suite     values that appear NOWHERE in the repo, assembled at
+#                      runtime so committing the test does not put a
+#                      key-shaped literal into a scanned file
+#
+# A real key pasted into any of these files is still caught -- verified by
+# committing one to tests/credential-drill.sh and watching it fail. That is the
+# whole reason this replaced a path allowlist, which blinded entire files and
+# would have shipped such a key through an authorized publish path.
+#
+# Adding an entry is a deliberate, reviewable act, and the first question is
+# whether the file could avoid the literal instead. Removing a PATTERN to quiet
+# a file remains forbidden.
+FIXTURES=(
+  # fable-codex credential-scrubbing test (history only; the skill left this repo)
+  "AKIAABCDEFGHIJKLMNOP"
+  "TOKEN=abcdef0123456789abcdef"
+  # The credential drill's synthetic key, and the detection fixtures the test
+  # suite used before it switched to assembling secrets at runtime. All of these
+  # are frozen in history, so no edit can reach them -- and rewriting history to
+  # remove a fake key would break the rule that exists for real ones.
+  "sk-ant-api03-FAKEFAKEFAKEFAKEFAKEFAKEFAKEFAKEFAKEFAKE"
+  "AKIA0987654321ZZZZZZ"
+  "wJalrXUtnFEMIK7MDENGbPxRfiCYEXAMPLEKEY"
+  "hunter2hunter2hunter2hunter2"
+  "s3cretV4lueThatIsQuiteLongIndeed99"
+  "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0"
+)
+
+# Containment is checked BOTH ways on purpose. A pattern's match does not always
+# span the whole fixture -- the JWT rule ends at the final dot, so its match is a
+# 49-char prefix of the 52-char fixture string -- and a one-directional check
+# silently stopped recognizing it.
+is_fixture() {
+  local candidate="$1" known
+  for known in "${FIXTURES[@]}"; do
+    case "$candidate" in *"$known"*) return 0 ;; esac
+    case "$known" in *"$candidate"*) return 0 ;; esac
+  done
+  return 1
+}
 
 # ------------------------------------------------------------------- sweep --
 
@@ -185,10 +224,6 @@ report() {
 
 while IFS=$'\t' read -r sha path; do
   # A blob can live at several paths across history; judge each pairing.
-  if printf '%s' "$path" | grep -Eq "$ALLOWLIST"; then
-    continue
-  fi
-
   scanned=$((scanned + 1))
 
   # `.env.example` is exempt from the FILENAME rule only -- it is the documented
@@ -210,12 +245,18 @@ while IFS=$'\t' read -r sha path; do
   # -i is load-bearing. Environment variables are UPPERCASE by convention --
   # AWS_SECRET_ACCESS_KEY, DB_PASSWORD -- so a case-sensitive keyword list
   # misses the single most common way a credential is written down.
-  hit=$(printf '%s' "$blob" | grep -aiEom1 -e "$CONTENT_RE") || true
-  if [ -n "$hit" ]; then
-    # Never print the full match -- the sweep's own output would then carry the
-    # secret into a log or a transcript.
+  #
+  # EVERY match, not just the first. `-m1` would stop at the first hit, so a
+  # known fixture string appearing above a real key would clear the whole file
+  # -- the exact shielding the value allowlist has to be careful not to create.
+  while IFS= read -r hit; do
+    [ -n "$hit" ] || continue
+    is_fixture "$hit" && continue
+    # Never print the full match -- the sweep's own output would otherwise carry
+    # the secret into a log or a transcript.
     report "content" "$sha" "$path" "matched ${#hit} chars starting '${hit:0:8}...'"
-  fi
+    break   # one finding per blob/path is enough to fail it
+  done < <(printf '%s' "$blob" | grep -aioE -e "$CONTENT_RE" || true)
 done < "$WORK/named"
 
 echo

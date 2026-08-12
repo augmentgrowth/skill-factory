@@ -484,7 +484,7 @@ class SecretsCheck(GateFixture):
 
     def test_key_at_an_authorized_path_blocks(self):
         """docs/ is authorized, so `range` passes it. Only content catches this."""
-        write(self.repo / "docs/setup.md", "ANTHROPIC_API_KEY=sk-ant-api03-" + "A" * 40 + "\n")
+        write(self.repo / "docs/setup.md", "ANTHROPIC_API_KEY=" + "sk-ant-" + "api07-" + "Q" * 40 + "\n")
         self.commit("docs with a key")
         result = self.release()
         self.assertBlocked(result, "secrets")
@@ -493,13 +493,13 @@ class SecretsCheck(GateFixture):
 
     def test_unquoted_uppercase_assignment_blocks(self):
         write(self.repo / ".claude/skills/sample-skill/notes.md",
-              "AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMIK7MDENGbPxRfiCYEXAMPLEKEY\n")
+              "AWS_SECRET_ACCESS_KEY=" + "qXpZmNbV" * 5 + "\n")
         self.commit("skill notes with a key")
         self.assertBlocked(self.release(), "secrets")
 
     def test_key_added_then_deleted_in_range_blocks(self):
         """The same class `range` pins for paths, now for content."""
-        write(self.repo / "docs/oops.md", "password: hunter2hunter2hunter2hunter2\n")
+        write(self.repo / "docs/oops.md", "password: " + "swordfish" * 4 + "\n")
         self.commit("add")
         self.git("rm", "--quiet", "docs/oops.md")
         self.commit("remove")
@@ -524,7 +524,7 @@ class SecretsCheck(GateFixture):
         result = self.run_gate("--release", "--remote-sha", zero)
         self.assertEqual(self.verdict(result, "secrets")["status"], "pass", result.stdout)
 
-        write(self.repo / "docs/leak.md", "password: hunter2hunter2hunter2hunter2\n")
+        write(self.repo / "docs/leak.md", "password: " + "swordfish" * 4 + "\n")
         self.commit("leak")
         self.assertBlocked(self.run_gate("--release", "--remote-sha", zero), "secrets")
 
@@ -594,7 +594,7 @@ class SecretsSweep(unittest.TestCase):
 
     def test_secret_added_then_deleted_is_still_found(self):
         """The class the tree-only scan misses and the whole reason for a sweep."""
-        self.commit_files({"leak.txt": "AKIA0987654321ZZZZZZ\n"}, "add")
+        self.commit_files({"leak.txt": "AKIA" + "1122334455667788\n"}, "add")
         subprocess.run(("git", "-C", str(self.repo), "rm", "--quiet", "leak.txt"), check=True)
         subprocess.run(
             ("git", "-C", str(self.repo), "commit", "--quiet", "-m", "remove"), check=True
@@ -608,21 +608,21 @@ class SecretsSweep(unittest.TestCase):
     def test_unquoted_uppercase_assignment_is_found(self):
         """AWS_SECRET_ACCESS_KEY=... — unquoted and uppercase, as every .env writes it."""
         self.commit_files(
-            {".env.example": "AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMIK7MDENGbPxRfiCYEXAMPLEKEY\n"}
+            {".env.example": "AWS_SECRET_ACCESS_KEY=" + "qXpZmNbV" * 5 + "\n"}
         )
         self.assert_detects("an unquoted uppercase assignment")
 
     def test_unquoted_yaml_password_is_found(self):
-        self.commit_files({"config.yml": "password: hunter2hunter2hunter2hunter2hunter2\n"})
+        self.commit_files({"config.yml": "password: " + "swordfish" * 4 + "\n"})
         self.assert_detects("an unquoted YAML password")
 
     def test_shell_export_is_found(self):
-        self.commit_files({"setup.sh": "export DB_PASSWORD=s3cretV4lueThatIsQuiteLongIndeed99\n"})
+        self.commit_files({"setup.sh": "export DB_PASSWORD=" + "correcthorse" + "batterystaple99\n"})
         self.assert_detects("an unquoted shell export")
 
     def test_jwt_is_found(self):
         self.commit_files(
-            {"t.js": 'const t="eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.sig";\n'}
+            {"t.js": 'const t="' + "eyJ" + "abcdefghijkl" + "." + "eyJ" + "mnopqrstuvwx" + '.sig";\n'}
         )
         self.assert_detects("a JWT")
 
@@ -630,7 +630,7 @@ class SecretsSweep(unittest.TestCase):
         """A key at a non-allowlisted path is found even when its content is identical
         to content that IS allowlisted elsewhere. Pins that the allowlist never
         silences a pattern globally."""
-        secret = "AKIAABCDEFGHIJKLMNOP\n"
+        secret = "AKIA" + "5566778899001122\n"
         self.commit_files({"docs/notes.md": secret})
         self.assert_detects("an allowlisted-content string at a non-allowlisted path")
 

@@ -52,6 +52,10 @@ git -C "$REPO" push --quiet -u origin HEAD 2>/dev/null
 git -C "$REPO" config user.email drill@example.invalid
 git -C "$REPO" config user.name "Instantiation Drill"
 
+# The starting point, captured before the session runs, so "what was built" is
+# measured against what was actually here rather than a hardcoded skill list.
+START_COMMIT="$(git -C "$REPO" rev-parse HEAD)"
+
 # Frozen builder input: one workflow description, deliberately ordinary and
 # describable, in the voice of someone who is not a programmer.
 read -r -d '' PROMPT <<'__P__'
@@ -86,9 +90,16 @@ echo "Running the session (this is the measured part)..."
 # run git — it built the skill correctly and then had nowhere to put it. That is
 # a measurement artifact, not a factory defect.
 #
-# Acceptable here because all three inputs are pinned: a frozen prompt, a
-# throwaway clone under TMPDIR, and a bare remote that goes nowhere. Do not
-# parameterize the prompt without revisiting this.
+# BE HONEST ABOUT WHAT THIS IS: permission checks are off process-wide, not
+# sandboxed to the clone. The temp directory bounds where the drill *intends* to
+# write, not where the session *can* write. And the session executes the cloned
+# revision's own instructions, so this drill is only as safe as the revision
+# under test.
+#
+# The real precondition is therefore trust in the revision, plus a frozen prompt
+# and a throwaway remote that goes nowhere. Do not run it against a revision you
+# would not run interactively, and do not parameterize the prompt without
+# revisiting this.
 ( cd "$REPO" && claude -p "$PROMPT" \
     --permission-mode bypassPermissions \
     --setting-sources project,local ) \
@@ -103,16 +114,24 @@ elapsed=$((end - start))
 # Measure the outcome, never the clock alone. A run that finishes in ninety
 # seconds because the agent gave up is a failure with a good-looking number.
 
+# Which skills existed BEFORE the session, read from the clone's starting commit
+# rather than hardcoded. A hardcoded list of the four factory skills silently
+# grades the wrong folder the moment a fifth ships -- and the drill would then
+# "pass" on a pre-existing skill it did not build.
+: > "$WORK/preexisting"
+git -C "$REPO" ls-tree -r --name-only "$START_COMMIT" -- .claude/skills \
+  | awk -F/ 'NF>=4 && $4=="SKILL.md" {print $3}' | sort -u > "$WORK/preexisting"
+
 built=""
+extras=0
 for dir in "$REPO"/.claude/skills/*/; do
   name="$(basename "$dir")"
-  case "$name" in
-    build-skill|improve-skill|graduate-skill|learn-from-session) continue ;;
-  esac
   [ -f "$dir/SKILL.md" ] || continue
-  built="$name"
-  break
+  grep -qxF "$name" "$WORK/preexisting" && continue
+  extras=$((extras + 1))
+  [ -z "$built" ] && built="$name"
 done
+[ "$extras" -gt 1 ] && echo "note: $extras new skill folders; grading '$built'"
 
 echo
 echo "───────────────────────────────────────────────────────"
