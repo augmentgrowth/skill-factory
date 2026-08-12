@@ -35,6 +35,10 @@ Checks:
     new-skills   a skill name present at HEAD but absent at the base must carry
                  a committed `public_safe: true`. Compares name sets, so a
                  rename into a new public name cannot evade it.
+    secrets      the outgoing commits' CONTENT is scanned for credential shapes.
+                 `range` authorizes paths; a key committed under docs/ or inside
+                 a skill folder sits at a perfectly authorized path, so only
+                 this check ever reads what is in the file.
 
 Usage:
 
@@ -342,7 +346,59 @@ def check_new_skills(base: str, head: str, allowed: frozenset[str]) -> str:
     return f"{len(new)} new skill(s) classified public-safe"
 
 
-CHECKS = ("versions", "range", "surface", "new-skills")
+def check_secrets(base: str, head: str) -> str:
+    """Scan the outgoing commits' content for credential shapes.
+
+    The `range` check authorizes outgoing PATHS; this one reads what is inside
+    them. A key committed to `docs/` or into a skill's own folder sits at a
+    perfectly authorized path, so `range` waves it through -- path authorization
+    and content safety are different questions, and the gate was only ever
+    answering the first.
+
+    Scoped to the outgoing range, not all history, because the sweep is
+    O(commits): a gate that adds a minute to every push is a gate people route
+    around with --no-verify. History only grows, so once a full sweep is clean,
+    scanning what is new keeps it clean. Run the full sweep by hand
+    (`tests/secrets-sweep.sh`) after history surgery or on a clone of unknown
+    provenance.
+    """
+    sweep = REPO_ROOT / "tests" / "secrets-sweep.sh"
+    if not os.access(sweep, os.X_OK):
+        raise CheckFailure(
+            f"secrets sweep missing or not executable at {sweep} -- "
+            "failing closed rather than publishing unscanned content"
+        )
+
+    # On the very first push to a ref, resolve_release_base() hands back the
+    # empty-tree hash, which is not a commit -- `--since` on it errors out and
+    # the check fails closed, making a legitimate first release unscannable
+    # rather than unscanned. Everything is outgoing in that case, so a full
+    # sweep IS the outgoing range. Caught by pushing to a fresh bare remote.
+    scope: tuple[str, ...] = ("--since", base)
+    try:
+        if git("cat-file", "-t", base).strip() != "commit":
+            scope = ()
+    except CheckFailure:
+        scope = ()
+
+    result = subprocess.run(
+        (str(sweep), str(REPO_ROOT), *scope),
+        capture_output=True, text=True,
+    )
+    if result.returncode == 0:
+        tail = result.stdout.strip().splitlines()
+        return tail[-1].replace("sweep: CLEAN -- ", "") if tail else "clean"
+    if result.returncode == 1:
+        raise CheckFailure(
+            "credential-shaped content in the outgoing commits:\n" + result.stdout.strip()
+        )
+    raise CheckFailure(
+        f"sweep could not run (exit {result.returncode}): "
+        f"{(result.stderr or result.stdout).strip()}"
+    )
+
+
+CHECKS = ("versions", "range", "surface", "new-skills", "secrets")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -390,6 +446,7 @@ def main(argv: list[str] | None = None) -> int:
             "range": lambda: check_range(base, head),
             "surface": lambda: check_surface(head),
             "new-skills": lambda: check_new_skills(base, head, allowed),
+            "secrets": lambda: check_secrets(base, head),
         }
         for name in selected:
             try:

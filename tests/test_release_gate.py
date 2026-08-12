@@ -61,6 +61,11 @@ class GateFixture(unittest.TestCase):
         write(self.repo / ".claude/skills/sample-skill/SKILL.md", SKILL_MD)
         (self.repo / "skills").symlink_to(".claude/skills")
         write(self.repo / "README.md", "# fixture\n")
+        # The `secrets` check shells out to the real sweep, so every fixture
+        # needs it. Copying the real script rather than a stub is the point: a
+        # stub would let the gate pass against detection logic that no longer
+        # works.
+        self.install_sweep()
         self.commit("baseline")
 
         self.remote = self.tmp / "remote.git"
@@ -70,6 +75,13 @@ class GateFixture(unittest.TestCase):
         self.base_sha = self.git("rev-parse", "HEAD").strip()
 
     # --- helpers ---------------------------------------------------------
+
+    def install_sweep(self):
+        dst = self.repo / "tests" / "secrets-sweep.sh"
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(REPO_ROOT / "tests" / "secrets-sweep.sh", dst)
+        dst.chmod(0o755)
+        return dst
 
     def git(self, *args):
         return subprocess.run(
@@ -453,6 +465,75 @@ class PushEnforcement(GateFixture):
             self.remote_head(), before,
             "unauthorized content reached the remote, as an uninstalled hook allows",
         )
+
+
+class SecretsCheck(GateFixture):
+    """The gate's `secrets` check: content, where `range` only did paths.
+
+    The hole this closes is a credential committed to an AUTHORIZED path.
+    `docs/` and `.claude/skills/` are both authorized, so `range` passes them
+    without ever reading the file. Every case here puts the secret somewhere
+    `range` is perfectly happy with, so a pass would mean the content check did
+    nothing at all.
+    """
+
+    def test_clean_range_passes(self):
+        write(self.repo / "docs/notes.md", "nothing to see\n")
+        self.commit("docs")
+        self.assertAuthorized(self.release())
+
+    def test_key_at_an_authorized_path_blocks(self):
+        """docs/ is authorized, so `range` passes it. Only content catches this."""
+        write(self.repo / "docs/setup.md", "ANTHROPIC_API_KEY=sk-ant-api03-" + "A" * 40 + "\n")
+        self.commit("docs with a key")
+        result = self.release()
+        self.assertBlocked(result, "secrets")
+        self.assertEqual(self.verdict(result, "range")["status"], "pass",
+                         "range should still pass -- that is the point of this check")
+
+    def test_unquoted_uppercase_assignment_blocks(self):
+        write(self.repo / ".claude/skills/sample-skill/notes.md",
+              "AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMIK7MDENGbPxRfiCYEXAMPLEKEY\n")
+        self.commit("skill notes with a key")
+        self.assertBlocked(self.release(), "secrets")
+
+    def test_key_added_then_deleted_in_range_blocks(self):
+        """The same class `range` pins for paths, now for content."""
+        write(self.repo / "docs/oops.md", "password: hunter2hunter2hunter2hunter2\n")
+        self.commit("add")
+        self.git("rm", "--quiet", "docs/oops.md")
+        self.commit("remove")
+        self.assertBlocked(self.release(), "secrets")
+
+    def test_first_push_scans_full_history(self):
+        """Pins a bug found by pushing to a fresh bare remote.
+
+        On the first push to a ref the base is the empty-tree hash, which is not
+        a commit. Passing it to `--since` errored, so the check failed closed and
+        a legitimate first release became unscannable rather than merely
+        unscanned. Everything is outgoing then, so a full sweep is the outgoing
+        range -- and it must still catch a secret.
+        """
+        # Creating the ref: the hook passes the zero sha, and with no
+        # remote-tracking refs left the gate falls back to the empty tree.
+        zero = "0" * 40
+        self.git("update-ref", "-d", "refs/remotes/origin/main")
+
+        write(self.repo / "docs/notes.md", "harmless\n")
+        self.commit("docs")
+        result = self.run_gate("--release", "--remote-sha", zero)
+        self.assertEqual(self.verdict(result, "secrets")["status"], "pass", result.stdout)
+
+        write(self.repo / "docs/leak.md", "password: hunter2hunter2hunter2hunter2\n")
+        self.commit("leak")
+        self.assertBlocked(self.run_gate("--release", "--remote-sha", zero), "secrets")
+
+    def test_a_broken_sweep_fails_closed(self):
+        """An unrunnable sweep must block, never wave the push through."""
+        (self.repo / "tests" / "secrets-sweep.sh").chmod(0o644)
+        write(self.repo / "docs/notes.md", "harmless\n")
+        self.commit("docs")
+        self.assertBlocked(self.release(), "secrets", "failing closed")
 
 
 class SecretsSweep(unittest.TestCase):

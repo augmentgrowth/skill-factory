@@ -76,6 +76,11 @@ git-tracked history from birth.
   alone: `scripts/release-gate.py --release`, enforced on every push by `githooks/pre-push`.
   A gate nothing invokes is documentation. Running the script by hand is a *diagnostic*: it exits
   non-zero even when clean, so `release-gate.py && git push` can never stand in for the hook.
+  The gate also scans the **content** of every outgoing commit for credential shapes, because path
+  authorization and content safety are different questions: a key committed under `docs/` or inside
+  a skill's own folder sits at a perfectly authorized path. That scan is scoped to what is
+  outgoing; sweep all history by hand with `tests/secrets-sweep.sh` after history surgery or on a
+  clone of unknown provenance.
 - **Install the hook yourself, in preflight — under all three conditions.** Nothing inside a git
   repo can set its own `core.hooksPath`, so a fresh clone starts unguarded, and that install is
   YOUR job rather than a setup step left to the builder. Before any git work in a build home, run

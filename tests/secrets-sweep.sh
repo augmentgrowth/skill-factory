@@ -12,8 +12,17 @@
 # you look at something benign, so the patterns are broad and the only way to
 # quiet a finding is to allowlist its *path* -- never to weaken a pattern.
 #
-# Usage:  tests/secrets-sweep.sh [repo-path]
-#         defaults to the repo this script lives in
+# Usage:  tests/secrets-sweep.sh [repo-path] [--since <ref>]
+#         repo-path defaults to the repo this script lives in
+#
+#   --since <ref>  scan only commits reachable from HEAD but not from <ref>,
+#                  instead of all history. This is what the release gate uses on
+#                  every push. Full history is O(commits) and already takes
+#                  seconds on a small repo, so running it on every push would
+#                  degrade into a minute-long stall as history grows -- and a
+#                  check people learn to dread is a check they route around with
+#                  --no-verify. History only grows, so once a full sweep is
+#                  clean, scanning what is new keeps it clean.
 #
 # Exit:   0 clean, 1 findings, 2 usage/environment error
 
@@ -23,7 +32,16 @@
 # fail-closed check must never allow.
 set -u -o pipefail
 
-REPO="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+REPO=""
+SINCE=""
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --since) SINCE="${2:-}"; [ -n "$SINCE" ] || { echo "--since needs a ref" >&2; exit 2; }; shift 2 ;;
+    -*)      echo "unknown option: $1" >&2; exit 2 ;;
+    *)       [ -z "$REPO" ] || { echo "unexpected argument: $1" >&2; exit 2; }; REPO="$1"; shift ;;
+  esac
+done
+REPO="${REPO:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 cd "$REPO" 2>/dev/null || { echo "not a directory: $REPO" >&2; exit 2; }
 git rev-parse --git-dir >/dev/null 2>&1 || { echo "not a git repo: $REPO" >&2; exit 2; }
 
@@ -116,7 +134,23 @@ ALLOWLIST="$ALLOWLIST|^docs/verification/2026-08-11-lab-223-drills\.md$"
 # splitting mangles paths containing runs of spaces. Either one turns a
 # forbidden path into an unrecognizable string that the filename rules no
 # longer match -- an evasion, not a cosmetic bug.
-git rev-list --all > "$WORK/commits" || { echo "sweep: FAILED to list commits" >&2; exit 2; }
+if [ -n "$SINCE" ]; then
+  # An unknown ref must never quietly become "scan nothing" -- that is exactly
+  # the fail-open shape this script exists to avoid.
+  git rev-parse --verify --quiet "$SINCE^{commit}" >/dev/null \
+    || { echo "sweep: --since ref not found: $SINCE" >&2; exit 2; }
+  SCOPE="commits since ${SINCE:0:8}"
+  git rev-list "$SINCE..HEAD" > "$WORK/commits" \
+    || { echo "sweep: FAILED to list commits since $SINCE" >&2; exit 2; }
+else
+  SCOPE="all history"
+  git rev-list --all > "$WORK/commits" || { echo "sweep: FAILED to list commits" >&2; exit 2; }
+fi
+
+if [ ! -s "$WORK/commits" ]; then
+  echo "sweep: CLEAN -- no commits in scope ($SCOPE)"
+  exit 0
+fi
 
 : > "$WORK/named"
 while read -r commit; do
@@ -186,7 +220,7 @@ done < "$WORK/named"
 
 echo
 if [ "$findings" -eq 0 ]; then
-  echo "sweep: CLEAN -- $scanned blob/path pairs scanned across $(git rev-list --all --count) commits"
+  echo "sweep: CLEAN -- $scanned blob/path pairs across $(wc -l < "$WORK/commits" | tr -d ' ') commit(s) ($SCOPE)"
   exit 0
 fi
 
