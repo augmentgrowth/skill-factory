@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- TEMPLATE: replace title. Convention: "<Client> AI Training — <Session Title>" -->
+<title>Client AI Training — Session Title</title>
+<style>
+  /* House tokens — keep in sync with demos/*.html. Do not add external fonts or CDNs. */
+  :root {
+    --bg: #FAF9F5; --surface: #FFFFFF; --surface-2: #F2F0E9; --border: #E3DFD5;
+    --text: #1F1E1D; --muted: #6C6A65; --faint: #8F8C85;
+    --accent: #D97757; --accent-soft: #FBEFE9;
+    --green: #4F7A52; --green-soft: #EDF3ED;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    --sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Helvetica, Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1F1E1D; --surface: #262624; --surface-2: #2E2C2A; --border: #3C3936;
+      --text: #F5F4EF; --muted: #A8A49D; --faint: #8A867F;
+      --accent: #E08A6B; --accent-soft: #3A2A24; --green: #8FBF93; --green-soft: #26302A;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #1F1E1D; --surface: #262624; --surface-2: #2E2C2A; --border: #3C3936;
+    --text: #F5F4EF; --muted: #A8A49D; --faint: #8A867F;
+    --accent: #E08A6B; --accent-soft: #3A2A24; --green: #8FBF93; --green-soft: #26302A;
+  }
+  :root[data-theme="light"] {
+    --bg: #FAF9F5; --surface: #FFFFFF; --surface-2: #F2F0E9; --border: #E3DFD5;
+    --text: #1F1E1D; --muted: #6C6A65; --faint: #8F8C85;
+    --accent: #D97757; --accent-soft: #FBEFE9; --green: #4F7A52; --green-soft: #EDF3ED;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--sans); line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 0 24px 80px; }
+
+  .topbar { position: fixed; top: 16px; right: 16px; z-index: 10; display: flex; gap: 8px; }
+  .topbar button { background: var(--surface); border: 1px solid var(--border); color: var(--muted); border-radius: 8px; padding: 7px 11px; font: inherit; font-size: 12px; cursor: pointer; }
+  .topbar button:hover { color: var(--text); }
+  .topbar button.primary { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); font-weight: 650; }
+
+  header.slide { padding: 56px 0 8px; }
+  .eyebrow { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-weight: 600; margin-bottom: 14px; }
+  h1 { font-size: clamp(30px, 4.2vw, 44px); line-height: 1.15; margin: 0 0 16px; letter-spacing: -0.02em; }
+  .lede { font-size: 18px; color: var(--muted); margin: 0 0 28px; }
+  .lede strong { color: var(--text); font-weight: 600; }
+  .stats { display: flex; flex-wrap: wrap; gap: 10px; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; min-width: 128px; }
+  .stat .n { font-size: 22px; font-weight: 650; letter-spacing: -0.01em; }
+  .stat .l { font-size: 12px; color: var(--faint); margin-top: 2px; }
+
+  hr.rule { border: 0; border-top: 1px solid var(--border); margin: 44px 0; }
+
+  .step { padding: 8px 0; }
+  .step-head { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+  .step-num { background: var(--accent-soft); color: var(--accent); border-radius: 6px; font-size: 12px; font-weight: 700; padding: 3px 9px; font-family: var(--mono); white-space: nowrap; }
+  .step-time { font-size: 12px; color: var(--faint); font-family: var(--mono); white-space: nowrap; }
+  h2 { font-size: 24px; margin: 0; letter-spacing: -0.01em; }
+  .sub { color: var(--muted); margin: 0 0 20px; font-size: 15px; }
+
+  pre.prompt { position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; font-family: var(--mono); font-size: 13px; line-height: 1.55; white-space: pre-wrap; word-break: break-word; margin: 14px 0; }
+  .copy { position: absolute; top: 10px; right: 10px; background: var(--surface-2); border: 1px solid var(--border); color: var(--muted); border-radius: 6px; padding: 4px 10px; font: inherit; font-size: 11px; cursor: pointer; font-family: var(--sans); }
+  .copy:hover { color: var(--text); }
+  .copy.done { background: var(--green-soft); color: var(--green); border-color: var(--green); }
+
+  .expect { background: var(--green-soft); border: 1px solid var(--border); border-left: 3px solid var(--green); border-radius: 8px; padding: 12px 16px; margin: 14px 0; font-size: 14px; }
+  .expect .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--green); font-weight: 700; display: block; margin-bottom: 4px; }
+  .expect p { margin: 0; } .expect p + p { margin-top: 6px; }
+
+  .callout { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 8px; padding: 14px 18px; margin: 16px 0; font-size: 14.5px; }
+  .callout p { margin: 0; } .callout p + p { margin-top: 8px; }
+
+  .youdo { display: inline-block; background: var(--accent-soft); color: var(--accent); font-size: 11.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; border-radius: 4px; padding: 2px 8px; margin: 4px 0 8px; }
+
+  details.fac { background: var(--surface-2); border: 1px dashed var(--border); border-radius: 8px; padding: 10px 14px; margin: 14px 0; font-size: 13.5px; color: var(--muted); }
+  details.fac summary { cursor: pointer; font-size: 11.5px; text-transform: uppercase; letter-spacing: .07em; font-weight: 700; color: var(--faint); }
+  details.fac ul { margin: 8px 0 2px; padding-left: 18px; }
+  details.fac li { margin: 4px 0; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 12px 0; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--faint); font-weight: 650; }
+  td b { color: var(--text); }
+
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0; }
+  @media (max-width: 860px) { .compare { grid-template-columns: 1fr; } }
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; display: flex; flex-direction: column; min-width: 0; }
+  .panel-head { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: baseline; gap: 10px; }
+  .panel-head .t { font-weight: 650; font-size: 13.5px; }
+  .badge { font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; border-radius: 4px; padding: 2px 7px; }
+  .badge.before { background: var(--surface-2); color: var(--faint); border: 1px solid var(--border); }
+  .badge.after { background: var(--accent-soft); color: var(--accent); }
+  .panel-body { padding: 14px 16px; font-size: 13px; max-height: 340px; overflow-y: auto; }
+  .panel-body p { margin: 0 0 9px; } .panel-body p:last-child { margin-bottom: 0; }
+  .panel-body .n { color: var(--faint); font-family: var(--mono); font-size: 11px; }
+
+  footer { color: var(--faint); font-size: 13px; padding-top: 8px; }
+  .ff { font-family: var(--mono); font-size: 12px; }
+  a { color: var(--accent); }
+
+  /* ---- Present mode (do not edit) ---- */
+  .progress { display: none; }
+  body.present .wrap { max-width: 980px; }
+  body.present .slide { display: none; }
+  body.present .slide.active { display: block; min-height: 100vh; padding: 72px 0 40px; overflow-y: auto; animation: fade .18s ease; }
+  body.present hr.rule { display: none; }
+  body.present .slide.active h2 { font-size: clamp(28px, 3.6vw, 38px); }
+  body.present .slide.active .sub, body.present .slide.active p { font-size: 17px; }
+  body.present .slide.active pre.prompt { font-size: 15px; }
+  body.present .slide.active table { font-size: 16px; }
+  body.present footer { display: none; }
+  body.present .progress { display: block; position: fixed; bottom: 16px; right: 16px; z-index: 10; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <button id="mode" class="primary">▶ present</button>
+  <button id="tt">◐ theme</button>
+</div>
+<div class="progress" id="prog"></div>
+<div class="wrap">
+
+<!-- HERO SLIDE. Every top-level block that should be a slide in Present mode carries class="slide". -->
+<header class="slide">
+  <div class="eyebrow">Client AI Training · Date</div>
+  <h1>Session title: outcome-shaped, not topic-shaped</h1>
+  <p class="lede">One or two sentences connecting last session to today. Bold the <strong>one thing</strong> participants leave with.</p>
+  <div class="stats">
+    <div class="stat"><div class="n">30 min</div><div class="l">what the time buys</div></div>
+    <div class="stat"><div class="n">N prompts</div><div class="l">all copy-paste</div></div>
+    <div class="stat"><div class="n">0 sends</div><div class="l">read-only, human reviews everything</div></div>
+  </div>
+  <div class="callout">
+    <p><b>The frame:</b> state the safety boundary and the session's core sequence in one line.</p>
+  </div>
+  <details class="fac"><summary>Facilitator notes</summary>
+    <ul>
+      <li>Opening line for the room.</li>
+      <li>One trip-up to preempt.</li>
+    </ul>
+  </details>
+</header>
+
+<hr class="rule">
+
+<!-- STEP CARD. Copy one per step; 4–8 steps per 30-min session. Minute labels must sum to session length.
+     Elements, all optional except step-head:
+       .sub          one-line framing under the title
+       .youdo        badge marking participant work time ("You do — N min")
+       pre.prompt    copy-paste prompt (copy button injected by script)
+       .expect       green panel: what a correct result looks like
+       .callout      accent panel: warning or boundary
+       table         decision tables
+       .compare      before/after evidence panels (badge.before / badge.after)
+       details.fac   facilitator notes: 1–2 talking points, trip-ups, a transition cue -->
+<section class="slide step">
+  <div class="step-head"><span class="step-num">STEP 1</span><h2>Step title, verb-first</h2><span class="step-time">5 min · 3 you-do</span></div>
+  <p class="sub">One line on what this step produces.</p>
+  <span class="youdo">You do — 3 min</span>
+  <p>Setup instruction. Then paste:</p>
+<pre class="prompt">The copy-paste prompt. Write the real prompt, never a description of one.
+Include the read-only boundary and a stop rule when the step touches real data.</pre>
+  <div class="expect"><span class="lbl">What you get back</span>
+    <p>Describe the shape of a correct result so participants can self-check.</p>
+  </div>
+  <details class="fac"><summary>Facilitator notes</summary>
+    <ul>
+      <li>Talking point.</li>
+      <li>Trip-up and the redirect for it.</li>
+      <li>Transition cue: how you know the room is ready to move.</li>
+    </ul>
+  </details>
+</section>
+
+<hr class="rule">
+
+<!-- EVIDENCE CARD (optional): a real captured before/after. House rule: real runs only, never mockups;
+     say in the footer where the artifacts live so the claim is auditable. -->
+<section class="slide step">
+  <div class="step-head"><span class="step-num">EXAMPLE</span><h2>What proof looks like</h2><span class="step-time">3 min</span></div>
+  <div class="compare">
+    <div class="panel">
+      <div class="panel-head"><span class="badge before">Before</span><span class="t">No skill</span></div>
+      <div class="panel-body"><p>Excerpt of the baseline output.</p></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><span class="badge after">After</span><span class="t">With the skill</span></div>
+      <div class="panel-body"><p>Excerpt of the improved output, same frozen input.</p></div>
+    </div>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- CLOSING SLIDE: definition of done as a table, homework, hub link. -->
+<section class="slide step">
+  <div class="step-head"><span class="step-num">DONE</span><h2>Your definition of done</h2><span class="step-time">2 min</span></div>
+  <table>
+    <tr><td><b>Artifact one</b> participants leave with</td></tr>
+    <tr><td><b>Artifact two</b></td></tr>
+  </table>
+  <p><b>Homework:</b> the follow-through that connects to next session. All training pages: <a href="index.html">training hub</a>.</p>
+</section>
+
+<footer class="slide">
+  <p class="ff">Provenance line: where any captured evidence in this page comes from, with repo path. github.com/augmentgrowth/skill-factory</p>
+</footer>
+
+</div>
+<script>
+  // Runtime (do not edit): theme toggle, copy buttons, present-mode slides.
+  (function () {
+    document.getElementById('tt').addEventListener('click', function () {
+      var cur = document.documentElement.getAttribute('data-theme');
+      if (!cur) cur = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', cur === 'dark' ? 'light' : 'dark');
+    });
+    document.querySelectorAll('pre.prompt').forEach(function (pre) {
+      var btn = document.createElement('button');
+      btn.className = 'copy'; btn.textContent = 'copy';
+      btn.addEventListener('click', function () {
+        var text = pre.textContent.replace(/^copy\s*/, '');
+        (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(function () {
+          btn.textContent = 'copied'; btn.classList.add('done');
+          setTimeout(function () { btn.textContent = 'copy'; btn.classList.remove('done'); }, 1600);
+        }).catch(function () { btn.textContent = 'select + ⌘C'; });
+      });
+      pre.appendChild(btn);
+    });
+    var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+    var modeBtn = document.getElementById('mode');
+    var prog = document.getElementById('prog');
+    var idx = 0;
+    function show(i) {
+      idx = Math.max(0, Math.min(slides.length - 1, i));
+      slides.forEach(function (s, j) { s.classList.toggle('active', j === idx); });
+      prog.textContent = (idx + 1) + ' / ' + slides.length;
+      window.scrollTo(0, 0);
+    }
+    function setMode(present) {
+      document.body.classList.toggle('present', present);
+      modeBtn.textContent = present ? '☰ guide' : '▶ present';
+      if (present) show(idx);
+      else slides.forEach(function (s) { s.classList.remove('active'); });
+      try { history.replaceState(null, '', present ? '?mode=present' : location.pathname); } catch (e) {}
+    }
+    modeBtn.addEventListener('click', function () { setMode(!document.body.classList.contains('present')); });
+    document.addEventListener('keydown', function (e) {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      if (!document.body.classList.contains('present')) return;
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); show(idx + 1); }
+      else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); show(idx - 1); }
+      else if (e.key === 'Escape') { setMode(false); }
+    });
+    if (new URLSearchParams(location.search).get('mode') === 'present') setMode(true);
+  })();
+</script>
+</body>
+</html>

@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Restore AI Training — Hub</title>
+<style>
+  :root {
+    --bg: #FAF9F5; --surface: #FFFFFF; --surface-2: #F2F0E9; --border: #E3DFD5;
+    --text: #1F1E1D; --muted: #6C6A65; --faint: #8F8C85;
+    --accent: #D97757; --accent-soft: #FBEFE9;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    --sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Helvetica, Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1F1E1D; --surface: #262624; --surface-2: #2E2C2A; --border: #3C3936;
+      --text: #F5F4EF; --muted: #A8A49D; --faint: #8A867F;
+      --accent: #E08A6B; --accent-soft: #3A2A24;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #1F1E1D; --surface: #262624; --surface-2: #2E2C2A; --border: #3C3936;
+    --text: #F5F4EF; --muted: #A8A49D; --faint: #8A867F;
+    --accent: #E08A6B; --accent-soft: #3A2A24;
+  }
+  :root[data-theme="light"] {
+    --bg: #FAF9F5; --surface: #FFFFFF; --surface-2: #F2F0E9; --border: #E3DFD5;
+    --text: #1F1E1D; --muted: #6C6A65; --faint: #8F8C85;
+    --accent: #D97757; --accent-soft: #FBEFE9;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--sans); line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 0 24px 80px; }
+  header { padding: 56px 0 8px; }
+  .eyebrow { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-weight: 600; margin-bottom: 14px; }
+  h1 { font-size: clamp(28px, 4vw, 40px); line-height: 1.15; margin: 0 0 12px; letter-spacing: -0.02em; }
+  .lede { font-size: 17px; color: var(--muted); margin: 0 0 8px; }
+  .toggle { position: fixed; top: 16px; right: 16px; z-index: 10; background: var(--surface); border: 1px solid var(--border); color: var(--muted); border-radius: 8px; padding: 7px 11px; font: inherit; font-size: 12px; cursor: pointer; }
+  h2 { font-size: 15px; text-transform: uppercase; letter-spacing: .07em; color: var(--faint); margin: 40px 0 12px; }
+  .card { display: block; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; margin: 10px 0; text-decoration: none; color: var(--text); }
+  .card:hover { border-color: var(--accent); }
+  .card .t { font-weight: 650; }
+  .card .d { color: var(--muted); font-size: 14px; margin-top: 2px; }
+  .card .m { color: var(--faint); font-size: 12px; font-family: var(--mono); margin-top: 6px; }
+  footer { color: var(--faint); font-size: 13px; padding-top: 32px; font-family: var(--mono); }
+</style>
+</head>
+<body>
+<button class="toggle" id="tt">◐ theme</button>
+<div class="wrap">
+<header>
+  <div class="eyebrow">Restore · AI Training</div>
+  <h1>Training hub</h1>
+  <p class="lede">Every session page and demo in one place. Bookmark this link — new sessions get added here.</p>
+</header>
+
+<h2>Sessions</h2>
+<a class="card" href="2026-08-20-first-automation.html">
+  <div class="t">Build and prove your first automation skill</div>
+  <div class="d">Take your #1 backlog candidate through candidate → skill → proof → optional Cloud routine. Copy-paste prompts for every step.</div>
+  <div class="m">2026-08-20 · 30 min · use ▶ present for the live session</div>
+</a>
+
+<h2>Demos</h2>
+<a class="card" href="../01-what-a-good-skill-does.html">
+  <div class="t">What a good skill actually does</div>
+  <div class="d">One transcript into three formats, with and without the skill. Why bother, in one page.</div>
+  <div class="m">demo 1</div>
+</a>
+<a class="card" href="../02-build-a-skill-walkthrough.html">
+  <div class="t">Watch a skill get built</div>
+  <div class="d">One full session, intake to committed skill, all seven steps.</div>
+  <div class="m">demo 2</div>
+</a>
+<a class="card" href="../03-fable-codex-factory-run.html">
+  <div class="t">The factory's first stress test</div>
+  <div class="d">A script-backed two-model workflow skill, judged on a real coding task.</div>
+  <div class="m">demo 3</div>
+</a>
+
+<footer>github.com/augmentgrowth/skill-factory</footer>
+</div>
+<script>
+  document.getElementById('tt').addEventListener('click', function () {
+    var cur = document.documentElement.getAttribute('data-theme');
+    if (!cur) cur = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', cur === 'dark' ? 'light' : 'dark');
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Restore AI Training — Build and Prove Your First Automation Skill</title>
+<style>
+  :root {
+    --bg: #FAF9F5; --surface: #FFFFFF; --surface-2: #F2F0E9; --border: #E3DFD5;
+    --text: #1F1E1D; --muted: #6C6A65; --faint: #8F8C85;
+    --accent: #D97757; --accent-soft: #FBEFE9;
+    --green: #4F7A52; --green-soft: #EDF3ED;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    --sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Helvetica, Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1F1E1D; --surface: #262624; --surface-2: #2E2C2A; --border: #3C3936;
+      --text: #F5F4EF; --muted: #A8A49D; --faint: #8A867F;
+      --accent: #E08A6B; --accent-soft: #3A2A24; --green: #8FBF93; --green-soft: #26302A;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #1F1E1D; --surface: #262624; --surface-2: #2E2C2A; --border: #3C3936;
+    --text: #F5F4EF; --muted: #A8A49D; --faint: #8A867F;
+    --accent: #E08A6B; --accent-soft: #3A2A24; --green: #8FBF93; --green-soft: #26302A;
+  }
+  :root[data-theme="light"] {
+    --bg: #FAF9F5; --surface: #FFFFFF; --surface-2: #F2F0E9; --border: #E3DFD5;
+    --text: #1F1E1D; --muted: #6C6A65; --faint: #8F8C85;
+    --accent: #D97757; --accent-soft: #FBEFE9; --green: #4F7A52; --green-soft: #EDF3ED;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--sans); line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 0 24px 80px; }
+
+  .topbar { position: fixed; top: 16px; right: 16px; z-index: 10; display: flex; gap: 8px; }
+  .topbar button { background: var(--surface); border: 1px solid var(--border); color: var(--muted); border-radius: 8px; padding: 7px 11px; font: inherit; font-size: 12px; cursor: pointer; }
+  .topbar button:hover { color: var(--text); }
+  .topbar button.primary { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); font-weight: 650; }
+
+  header.slide { padding: 56px 0 8px; }
+  .eyebrow { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-weight: 600; margin-bottom: 14px; }
+  h1 { font-size: clamp(30px, 4.2vw, 44px); line-height: 1.15; margin: 0 0 16px; letter-spacing: -0.02em; }
+  .lede { font-size: 18px; color: var(--muted); margin: 0 0 28px; }
+  .lede strong { color: var(--text); font-weight: 600; }
+  .stats { display: flex; flex-wrap: wrap; gap: 10px; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; min-width: 128px; }
+  .stat .n { font-size: 22px; font-weight: 650; letter-spacing: -0.01em; }
+  .stat .l { font-size: 12px; color: var(--faint); margin-top: 2px; }
+
+  hr.rule { border: 0; border-top: 1px solid var(--border); margin: 44px 0; }
+
+  .step { padding: 8px 0; }
+  .step-head { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+  .step-num { background: var(--accent-soft); color: var(--accent); border-radius: 6px; font-size: 12px; font-weight: 700; padding: 3px 9px; font-family: var(--mono); white-space: nowrap; }
+  .step-time { font-size: 12px; color: var(--faint); font-family: var(--mono); white-space: nowrap; }
+  h2 { font-size: 24px; margin: 0; letter-spacing: -0.01em; }
+  .sub { color: var(--muted); margin: 0 0 20px; font-size: 15px; }
+
+  pre.prompt { position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; font-family: var(--mono); font-size: 13px; line-height: 1.55; white-space: pre-wrap; word-break: break-word; margin: 14px 0; }
+  .copy { position: absolute; top: 10px; right: 10px; background: var(--surface-2); border: 1px solid var(--border); color: var(--muted); border-radius: 6px; padding: 4px 10px; font: inherit; font-size: 11px; cursor: pointer; font-family: var(--sans); }
+  .copy:hover { color: var(--text); }
+  .copy.done { background: var(--green-soft); color: var(--green); border-color: var(--green); }
+
+  .expect { background: var(--green-soft); border: 1px solid var(--border); border-left: 3px solid var(--green); border-radius: 8px; padding: 12px 16px; margin: 14px 0; font-size: 14px; }
+  .expect .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--green); font-weight: 700; display: block; margin-bottom: 4px; }
+  .expect p { margin: 0; } .expect p + p { margin-top: 6px; }
+
+  .callout { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 8px; padding: 14px 18px; margin: 16px 0; font-size: 14.5px; }
+  .callout p { margin: 0; } .callout p + p { margin-top: 8px; }
+
+  .youdo { display: inline-block; background: var(--accent-soft); color: var(--accent); font-size: 11.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; border-radius: 4px; padding: 2px 8px; margin: 4px 0 8px; }
+
+  details.fac { background: var(--surface-2); border: 1px dashed var(--border); border-radius: 8px; padding: 10px 14px; margin: 14px 0; font-size: 13.5px; color: var(--muted); }
+  details.fac summary { cursor: pointer; font-size: 11.5px; text-transform: uppercase; letter-spacing: .07em; font-weight: 700; color: var(--faint); }
+  details.fac ul { margin: 8px 0 2px; padding-left: 18px; }
+  details.fac li { margin: 4px 0; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 12px 0; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--faint); font-weight: 650; }
+  td b { color: var(--text); }
+
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0; }
+  @media (max-width: 860px) { .compare { grid-template-columns: 1fr; } }
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; display: flex; flex-direction: column; min-width: 0; }
+  .panel-head { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: baseline; gap: 10px; }
+  .panel-head .t { font-weight: 650; font-size: 13.5px; }
+  .badge { font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; border-radius: 4px; padding: 2px 7px; }
+  .badge.before { background: var(--surface-2); color: var(--faint); border: 1px solid var(--border); }
+  .badge.after { background: var(--accent-soft); color: var(--accent); }
+  .panel-body { padding: 14px 16px; font-size: 13px; max-height: 340px; overflow-y: auto; }
+  .panel-body p { margin: 0 0 9px; } .panel-body p:last-child { margin-bottom: 0; }
+  .panel-body .n { color: var(--faint); font-family: var(--mono); font-size: 11px; }
+
+  footer { color: var(--faint); font-size: 13px; padding-top: 8px; }
+  .ff { font-family: var(--mono); font-size: 12px; }
+  a { color: var(--accent); }
+
+  /* ---- Present mode ---- */
+  .progress { display: none; }
+  body.present .wrap { max-width: 980px; }
+  body.present .slide { display: none; }
+  body.present .slide.active { display: block; min-height: 100vh; padding: 72px 0 40px; overflow-y: auto; animation: fade .18s ease; }
+  body.present hr.rule { display: none; }
+  body.present .slide.active h2 { font-size: clamp(28px, 3.6vw, 38px); }
+  body.present .slide.active .sub, body.present .slide.active p { font-size: 17px; }
+  body.present .slide.active pre.prompt { font-size: 15px; }
+  body.present .slide.active table { font-size: 16px; }
+  body.present footer { display: none; }
+  body.present .progress { display: block; position: fixed; bottom: 16px; right: 16px; z-index: 10; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <button id="mode" class="primary">▶ present</button>
+  <button id="tt">◐ theme</button>
+</div>
+<div class="progress" id="prog"></div>
+<div class="wrap">
+
+<header class="slide">
+  <div class="eyebrow">Restore AI Training · Aug 20</div>
+  <h1>Build and prove your first automation skill</h1>
+  <p class="lede">Last week you ranked your automation candidates. Today you take your <strong>#1 candidate</strong> and turn it into a reusable Claude skill — then prove it earns its place before it ever runs on its own.</p>
+  <div class="stats">
+    <div class="stat"><div class="n">30 min</div><div class="l">one candidate, start to proof</div></div>
+    <div class="stat"><div class="n">4 prompts</div><div class="l">all copy-paste</div></div>
+    <div class="stat"><div class="n">0 sends</div><div class="l">read-only, human reviews everything</div></div>
+  </div>
+  <div class="callout">
+    <p><b>The sequence:</b> candidate → skill → proof → <i>optional</i> Cloud routine. A person still makes the final call. Use scrubbed data. Nothing sends, publishes, deletes, or changes permissions today.</p>
+  </div>
+  <details class="fac"><summary>Facilitator notes</summary>
+    <ul>
+      <li>Open on the stats row: "everything you'll paste today is on this page — this link is yours to keep."</li>
+      <li>Ask who has their ranked top three from last week. Anyone without one pairs up.</li>
+      <li>Trip-up: someone picks a huge candidate. Redirect: smallest repeatable piece, not the whole job.</li>
+    </ul>
+  </details>
+</header>
+
+<hr class="rule">
+
+<section class="slide step">
+  <div class="step-head"><span class="step-num">STEP 1</span><h2>Pick your candidate</h2><span class="step-time">3 min</span></div>
+  <p class="sub">From last week's ranked backlog, take your #1 <b>low-risk</b> candidate.</p>
+  <p>Good picks are frequent, repeatable, and survivable if the output is wrong — because a person reviews it anyway. If your #1 feels big, shrink it to its smallest repeatable piece.</p>
+  <div class="expect"><span class="lbl">Before moving on, you have</span>
+    <p>One candidate, one sentence: "Every ___ I take ___ and produce ___."</p>
+  </div>
+  <details class="fac"><summary>Facilitator notes</summary>
+    <ul>
+      <li>Have 1–2 people say theirs out loud — it calibrates the room's scope.</li>
+      <li>Trip-up: candidates that need a connector nobody has set up. Fine for today — a file export or open browser page works as input.</li>
+    </ul>
+  </details>
+</section>
+
+<hr class="rule">
+
+<section class="slide step">
+  <div class="step-head"><span class="step-num">STEP 2</span><h2>Write the workflow card</h2><span class="step-time">6 min · 4 you-do</span></div>
+  <p class="sub">The card is the contract for the skill <i>and</i> its test. You are not building yet.</p>
+  <span class="youdo">You do — 4 min</span>
+  <p>Open Claude Code in a folder with only the scrubbed material you need. Paste:</p>
+<pre class="prompt">Use Plan Mode. Turn this automation candidate into the smallest useful skill.
+
+Candidate: [paste one item from your top three]
+Inputs: [files, connector, or browser page]
+Output: [what I want back]
+
+Read only. Do not send, publish, delete, edit, move, create, or change permissions.
+Stop if information is missing, unclear, or sensitive.
+
+Give me: trigger, inputs, output, human review, stop rule, and frozen safe test.
+Do not build it yet.</pre>
+  <div class="expect"><span class="lbl">What you get back</span>
+    <p>A short card: trigger, inputs, output, the human-review point, one stop rule, and a frozen safe test sample. Keep it — every later step refers to it.</p>
+  </div>
+  <details class="fac"><summary>Facilitator notes</summary>
+    <ul>
+      <li>Talking point: "frozen sample" means the same input every time — that's what makes before/after comparison honest.</li>
+      <li>Trip-up: people skip the stop rule. It's the line between an assistant and a liability.</li>
+      <li>Transition cue: when most screens show a card, ask one person to read their stop rule aloud.</li>
+    </ul>
+  </details>
+</section>
+
+<hr class="rule">
+
+<section class="slide step">
+  <div class="step-head"><span class="step-num">STEP 3</span><h2>Build it — baseline first</h2><span class="step-time">8 min · 5 you-do</span></div>
+  <p class="sub">Two build paths. Both require the same proof: a no-skill baseline before the skill exists.</p>
+  <table>
+    <tr><th>If you have…</th><th>Use this path</th></tr>
+    <tr><td>The shared Claude Skill Factory</td><td><b>Use it for the fuller test loop.</b> Open it and say <i>help me build a skill</i>, then give it the card and sample.</td></tr>
+    <tr><td>Claude's Skill Creator</td><td><b>Use it if it's already in your Claude workspace.</b> Same workflow card, same proof required below.</td></tr>
+  </table>
+  <span class="youdo">You do — 5 min</span>
+<pre class="prompt">I want to build a reusable Claude skill from this workflow card.
+
+Workflow card:
+[paste the card]
+
+Use only this scrubbed sample: [file, connector scope, or exact browser page].
+First create a no-skill baseline. Then build the skill and run it on the same
+frozen sample. Read only; do not change anything. Stop rather than guessing.
+
+Save the baseline, skilled result, and short comparison. Return a draft or local
+artifact only; a person reviews it before anything happens.</pre>
+  <p>For inputs, name the exact Asana project, Gmail search, Drive folder, or connector scope; attach a scrubbed transcript, report, or export; or inspect an exact open browser page without clicking anything that changes state.</p>
+  <div class="callout"><p>A browser-only pilot is fine for learning. It <b>cannot</b> become a Cloud routine until its inputs are reachable through an approved connector, repository, or API.</p></div>
+  <details class="fac"><summary>Facilitator notes</summary>
+    <ul>
+      <li>Talking point: the baseline is captured <i>before</i> the skill exists — nobody grades on a curve.</li>
+      <li>While people build, narrate the next slide's worked example so slower builders don't feel stuck.</li>
+    </ul>
+  </details>
+</section>
+
+<hr class="rule">
+
+<section class="slide step">
+  <div class="step-head"><span class="step-num">EXAMPLE</span><h2>What proof looks like</h2><span class="step-time">3 min</span></div>
+  <p class="sub">A real run from our skill library — same transcript, same request, same model. The only variable is the skill. Excerpts, unedited.</p>
+  <div class="compare">
+    <div class="panel">
+      <div class="panel-head"><span class="badge before">Before</span><span class="t">No skill</span></div>
+      <div class="panel-body">
+        <p>Here's your content repurposed across all three formats! 🚀</p>
+        <p>🧵 1/ Most A/B tests are basically theater. Here's why 80% of them fail to teach you anything (and how to fix it) 👇</p>
+        <p>2/ The #1 problem? Underpowered tests. If you don't have enough traffic to detect the effect you're looking for, your test literally cannot give you a reliable answer. ⚠️</p>
+        <p>What's your experimentation process look like? Drop a comment below! 👇</p>
+        <p class="n">#GrowthMarketing #ABTesting #Experimentation #DataDriven #CRO #MarketingStrategy</p>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><span class="badge after">After</span><span class="t">With the skill</span></div>
+      <div class="panel-body">
+        <p class="n">1</p>
+        <p>An experimentation lead audited a pile of A/B tests and found ~80% were underpowered.</p>
+        <p>Translation: the test could never have detected the effect the team was hoping for. Even if the effect was completely real.</p>
+        <p>They ran it anyway. Saw green. Shipped. Celebrated.</p>
+        <p class="n">5</p>
+        <p>Her line for it: "The test isn't measuring the headline. It's measuring your patience."</p>
+      </div>
+    </div>
+  </div>
+  <p>The before isn't <i>wrong</i> — every fact is accurate. It's generic, and generic is what fails when the output carries your name. That gap is what your comparison should show. Full demo: <a href="../01-what-a-good-skill-does.html">What a good skill actually does</a>.</p>
+  <details class="fac"><summary>Facilitator notes</summary>
+    <ul>
+      <li>Point at one concrete difference (the emoji, the surviving quote) rather than describing the panels abstractly.</li>
+      <li>Bridge: "your comparison in step 4 is you doing this exact read on your own output."</li>
+    </ul>
+  </details>
+</section>
+
+<hr class="rule">
+
+<section class="slide step">
+  <div class="step-head"><span class="step-num">STEP 4</span><h2>Prove it earns its place</h2><span class="step-time">5 min · 3 you-do</span></div>
+  <p class="sub">A fresh session — or a second model — judges the comparison. Not you, and not the session that built it.</p>
+  <span class="youdo">You do — 3 min</span>
+  <p>Start a fresh Claude Code session, or ask a second model:</p>
+<pre class="prompt">Read this workflow card, the no-skill baseline, and the skilled result from the same frozen sample.
+
+Check accuracy, format, allowed inputs, unsupported claims, stop rules, and whether
+the skilled result is clearly better or more consistent. List what still needs judgment.
+
+Do not change either output. Give a short keep / revise / stop verdict with evidence.</pre>
+  <div class="expect"><span class="lbl">What you get back</span>
+    <p>A keep / revise / stop verdict with evidence. Make <b>one</b> correction and rerun the same sample. If it still needs heavy steering, shrink the job.</p>
+  </div>
+  <details class="fac"><summary>Facilitator notes</summary>
+    <ul>
+      <li>Talking point: "the builder session is attached to its own work — that's why the reviewer is fresh."</li>
+      <li>Trip-up: people iterate five times live. One correction, one rerun. More is homework.</li>
+    </ul>
+  </details>
+</section>
+
+<hr class="rule">
+
+<section class="slide step">
+  <div class="step-head"><span class="step-num">STEP 5</span><h2>Graduate it — only when proven</h2><span class="step-time">3 min</span></div>
+  <p class="sub">A Cloud routine is a graduation, never a first experiment.</p>
+  <p>Cloud routines run on Anthropic-managed infrastructure, so keep them narrow:</p>
+  <table>
+    <tr><th>Rule</th><th>Why</th></tr>
+    <tr><td><b>Skill committed to the included repository</b></td><td>Personal local skills are unavailable to Cloud routines.</td></tr>
+    <tr><td><b>Minimum connectors only</b></td><td>Each connector is standing access the routine holds forever.</td></tr>
+    <tr><td><b>Draft or review artifact only</b></td><td>Never a send, task change, or final decision.</td></tr>
+    <tr><td><b>Cloud, not Local — and <i>Run now</i> once before scheduling</b></td><td>One supervised run before any schedule exists.</td></tr>
+  </table>
+  <p>When it's ready:</p>
+<pre class="prompt">This skill has passed its frozen-sample test. Help me prepare it for a Claude Code
+Cloud routine. Confirm the skill is committed in the selected repository, list the
+minimum connectors and permissions needed, and write a routine prompt that produces
+only a reviewable draft. Do not schedule it yet. I want to run it once first.</pre>
+  <details class="fac"><summary>Facilitator notes</summary>
+    <ul>
+      <li>This step is a preview, not today's exercise — nobody schedules anything today.</li>
+      <li>Trip-up: browser-pilot skills can't graduate until inputs are connector/repo/API-reachable (from step 3).</li>
+    </ul>
+  </details>
+</section>
+
+<hr class="rule">
+
+<section class="slide step">
+  <div class="step-head"><span class="step-num">DONE</span><h2>Your definition of done</h2><span class="step-time">2 min</span></div>
+  <table>
+    <tr><td><b>A workflow card</b> and a frozen, scrubbed sample</td></tr>
+    <tr><td><b>A no-skill baseline</b> and a skilled result on that same sample</td></tr>
+    <tr><td><b>A review verdict</b> — keep, revise, or stop — from a fresh session</td></tr>
+    <tr><td><b>One stop rule</b> and a named human-review point</td></tr>
+  </table>
+  <p>The routine is a next step, not today's requirement. <b>Homework:</b> finish the proof loop on your candidate if you didn't get through it live, and bring the verdict next week.</p>
+  <p>Prior session: <a href="https://github.com/augmentgrowth/skill-factory">skill library</a> · all training pages: <a href="index.html">training hub</a></p>
+  <details class="fac"><summary>Facilitator notes</summary>
+    <ul>
+      <li>Close by asking each person which of the four done-items they already have.</li>
+      <li>Drop this page's link in Slack right after the call — it's the leave-behind.</li>
+    </ul>
+  </details>
+</section>
+
+<footer class="slide">
+  <p class="ff">The before/after example is a real captured run: both sides generated 2026-07-15 from the identical transcript in demos/artifacts/content-repurposer/cases/baseline/input.md; the no-skill baseline was captured before the skill existed. github.com/augmentgrowth/skill-factory</p>
+</footer>
+
+</div>
+<script>
+  (function () {
+    // theme
+    document.getElementById('tt').addEventListener('click', function () {
+      var cur = document.documentElement.getAttribute('data-theme');
+      if (!cur) cur = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', cur === 'dark' ? 'light' : 'dark');
+    });
+
+    // copy buttons
+    document.querySelectorAll('pre.prompt').forEach(function (pre) {
+      var btn = document.createElement('button');
+      btn.className = 'copy'; btn.textContent = 'copy';
+      btn.addEventListener('click', function () {
+        var text = pre.textContent.replace(/^copy\s*/, '');
+        (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(function () {
+          btn.textContent = 'copied'; btn.classList.add('done');
+          setTimeout(function () { btn.textContent = 'copy'; btn.classList.remove('done'); }, 1600);
+        }).catch(function () { btn.textContent = 'select + ⌘C'; });
+      });
+      pre.appendChild(btn);
+    });
+
+    // present mode
+    var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+    var modeBtn = document.getElementById('mode');
+    var prog = document.getElementById('prog');
+    var idx = 0;
+
+    function show(i) {
+      idx = Math.max(0, Math.min(slides.length - 1, i));
+      slides.forEach(function (s, j) { s.classList.toggle('active', j === idx); });
+      prog.textContent = (idx + 1) + ' / ' + slides.length;
+      window.scrollTo(0, 0);
+    }
+    function setMode(present) {
+      document.body.classList.toggle('present', present);
+      modeBtn.textContent = present ? '☰ guide' : '▶ present';
+      if (present) show(idx);
+      else slides.forEach(function (s) { s.classList.remove('active'); });
+      try { history.replaceState(null, '', present ? '?mode=present' : location.pathname); } catch (e) {}
+    }
+    modeBtn.addEventListener('click', function () { setMode(!document.body.classList.contains('present')); });
+    document.addEventListener('keydown', function (e) {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      if (!document.body.classList.contains('present')) return;
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); show(idx + 1); }
+      else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); show(idx - 1); }
+      else if (e.key === 'Escape') { setMode(false); }
+    });
+    if (new URLSearchParams(location.search).get('mode') === 'present') setMode(true);
+  })();
+</script>
+</body>
+</html>
