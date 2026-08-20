@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Restore AI Training — Session Brief, 20 August</title>
+<style>
+  :root {
+    --bg: #FAF9F5; --surface: #FFFFFF; --surface-2: #F2F0E9; --border: #E3DFD5;
+    --text: #1F1E1D; --muted: #6C6A65; --faint: #8F8C85;
+    --accent: #D97757; --accent-soft: #FBEFE9;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    --sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Helvetica, Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #1F1E1D; --surface: #262624; --surface-2: #2E2C2A; --border: #3C3936;
+      --text: #F5F4EF; --muted: #A8A49D; --faint: #8A867F;
+      --accent: #E08A6B; --accent-soft: #3A2A24;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #1F1E1D; --surface: #262624; --surface-2: #2E2C2A; --border: #3C3936;
+    --text: #F5F4EF; --muted: #A8A49D; --faint: #8A867F;
+    --accent: #E08A6B; --accent-soft: #3A2A24;
+  }
+  :root[data-theme="light"] {
+    --bg: #FAF9F5; --surface: #FFFFFF; --surface-2: #F2F0E9; --border: #E3DFD5;
+    --text: #1F1E1D; --muted: #6C6A65; --faint: #8F8C85;
+    --accent: #D97757; --accent-soft: #FBEFE9;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--sans); line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 0 24px 80px; }
+  header { padding: 56px 0 4px; }
+  .eyebrow { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-weight: 600; margin-bottom: 14px; }
+  h1 { font-size: clamp(28px, 4vw, 40px); line-height: 1.15; margin: 0 0 14px; letter-spacing: -0.02em; text-wrap: balance; }
+  .lede { font-size: 17px; color: var(--muted); margin: 0; }
+  .lede + .lede { margin-top: 12px; }
+  .toggle { position: fixed; top: 16px; right: 16px; z-index: 10; background: var(--surface); border: 1px solid var(--border); color: var(--muted); border-radius: 8px; padding: 7px 11px; font: inherit; font-size: 12px; cursor: pointer; }
+  .toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  h2 { font-size: 15px; text-transform: uppercase; letter-spacing: .07em; color: var(--faint); margin: 44px 0 12px; }
+  p { margin: 0 0 14px; }
+
+  .arc { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 0; list-style: none; counter-reset: arc; }
+  .arc li { display: grid; grid-template-columns: 34px 1fr; gap: 14px; align-items: baseline; padding: 11px 0; border-bottom: 1px solid var(--border); }
+  .arc li:last-child { border-bottom: 0; }
+  .arc li::before { counter-increment: arc; content: counter(arc); font-family: var(--mono); font-size: 12px; color: var(--accent); }
+  .arc .t { font-weight: 650; }
+  .arc .d { color: var(--muted); font-size: 15px; display: block; margin-top: 1px; }
+
+  .note { background: var(--accent-soft); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; }
+  .note p:last-child { margin-bottom: 0; }
+  .note strong { font-weight: 650; }
+
+  .card { display: block; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; margin: 10px 0; text-decoration: none; color: var(--text); }
+  .card:hover { border-color: var(--accent); }
+  .card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .card .t { font-weight: 650; }
+  .card .d { color: var(--muted); font-size: 14px; margin-top: 2px; }
+  .card .m { color: var(--faint); font-size: 12px; font-family: var(--mono); margin-top: 6px; }
+
+  .paths { display: grid; gap: 10px; }
+  .path { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; }
+  .path .t { font-weight: 650; }
+  .path .d { color: var(--muted); font-size: 14px; margin: 2px 0 10px; }
+  .path a { color: var(--accent); }
+  pre { background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 11px 13px; margin: 8px 0 0; font-family: var(--mono); font-size: 12.5px; line-height: 1.55; overflow-x: auto; }
+  code { font-family: var(--mono); font-size: 0.92em; }
+  .tag { display: inline-block; font-family: var(--mono); font-size: 11px; letter-spacing: .04em; text-transform: uppercase; color: var(--faint); border: 1px solid var(--border); border-radius: 5px; padding: 2px 7px; margin-left: 8px; vertical-align: 2px; }
+  footer { color: var(--faint); font-size: 13px; padding-top: 36px; margin-top: 40px; border-top: 1px solid var(--border); font-family: var(--mono); }
+  footer a { color: var(--faint); }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<button class="toggle" id="tt">◐ theme</button>
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">Restore · AI Training · Thursday 20 August · 9:30am PT</div>
+  <h1>Build and prove your first automation skill</h1>
+  <p class="lede">Last session you built a backlog of automation candidates and ranked your top three. Today you take the strongest low-risk one and turn it into a reusable Claude skill — then prove it actually beats doing the work without it.</p>
+  <p class="lede">Thirty minutes, most of it hands-on. Bring your #1 candidate and one scrubbed example of the work.</p>
+</header>
+
+<h2>How the half hour runs</h2>
+<ol class="arc">
+  <li><span><span class="t">Pick your candidate</span><span class="d">Your #1 low-risk item from last week's ranked list. Lowest risk, not highest value.</span></span></li>
+  <li><span><span class="t">Write the workflow card</span><span class="d">Trigger, inputs, output, human review, stop rule, frozen test sample. The card is the contract — nobody builds yet.</span></span></li>
+  <li><span><span class="t">Build it, baseline first</span><span class="d">Capture what Claude does with no skill, then build the skill and rerun the same sample. Two build paths, same proof required.</span></span></li>
+  <li><span><span class="t">Prove it earns its place</span><span class="d">A fresh session — or a second model — judges the comparison. Not you, and not the session that built it.</span></span></li>
+  <li><span><span class="t">Graduate it, only when proven</span><span class="d">A scheduled Cloud routine is a graduation, never a first experiment. Optional, and not today's requirement.</span></span></li>
+</ol>
+
+<h2>Ground rules</h2>
+<div class="note">
+  <p><strong>Read-only, all session.</strong> Nothing gets sent, published, deleted, edited, moved, or re-permissioned in a real work tool.</p>
+  <p><strong>Scrubbed data only.</strong> No patient, customer, financial, or credential data. Use a representative or sanitized example.</p>
+  <p><strong>A person still makes the final call.</strong> We are automating one repeatable piece of work, not a job.</p>
+</div>
+
+<h2>Optional, before we start <span class="tag">5 min</span></h2>
+<p>You need one place to build the skill. If neither is set up, come anyway — you can follow along and install afterward, and the workflow card is the part that carries the value.</p>
+
+<div class="paths">
+  <div class="path">
+    <div class="t">Skill Factory</div>
+    <div class="d">The fuller loop — it captures the no-skill baseline for you and holds you to the before/after comparison. If you cloned it back in July, you already have it. Open the folder in Claude Code and say <code>help me build a skill</code>.</div>
+    <pre>git clone https://github.com/augmentgrowth/skill-factory.git</pre>
+    <div class="d" style="margin:10px 0 0">Or install it as a plugin, so it loads in whatever project you're already working in:</div>
+    <pre>claude plugin marketplace add augmentgrowth/skill-factory
+claude plugin install skill-factory@skill-factory</pre>
+  </div>
+  <div class="path">
+    <div class="t">Skill Creator</div>
+    <div class="d">Anthropic's own skill builder. Lighter, and fine for today — it builds the skill and you run the proof step yourself with the prompt in the guide.</div>
+    <pre>claude plugin install skill-creator@claude-plugins-official</pre>
+    <div class="d" style="margin:10px 0 0">Docs: <a href="https://docs.claude.com/en/docs/claude-code/skills">docs.claude.com/en/docs/claude-code/skills</a></div>
+  </div>
+</div>
+
+<h2>Materials</h2>
+<a class="card" href="2026-08-20-first-automation.html">
+  <div class="t">Participant guide — build and prove your first automation skill</div>
+  <div class="d">Every step with real copy-paste prompts, an expected result for each, and a worked before/after example. This is the page we work from live.</div>
+  <div class="m">today's session · open this one</div>
+</a>
+<a class="card" href="./">
+  <div class="t">Training hub</div>
+  <div class="d">Every session page and demo in one place. Bookmark this — new sessions get added here.</div>
+  <div class="m">bookmark</div>
+</a>
+<a class="card" href="../01-what-a-good-skill-does.html">
+  <div class="t">What a good skill actually does</div>
+  <div class="d">One transcript into three formats, with and without the skill. Why any of this is worth the effort, in one page.</div>
+  <div class="m">demo · 3 min read</div>
+</a>
+<a class="card" href="../02-build-a-skill-walkthrough.html">
+  <div class="t">Watch a skill get built</div>
+  <div class="d">One full session start to finish, intake through committed skill. Useful if you want to see the whole shape before you try it.</div>
+  <div class="m">demo · 5 min read</div>
+</a>
+
+<h2>What done looks like</h2>
+<p>You leave with a workflow card and a frozen scrubbed sample, a no-skill baseline next to a skilled result, a keep / revise / stop verdict from a second opinion, and one named point where a human reviews the output. A scheduled routine is the next step, not today's finish line.</p>
+
+<footer><a href="https://github.com/augmentgrowth/skill-factory">github.com/augmentgrowth/skill-factory</a></footer>
+</div>
+<script>
+  document.getElementById('tt').addEventListener('click', function () {
+    var cur = document.documentElement.getAttribute('data-theme');
+    if (!cur) cur = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', cur === 'dark' ? 'light' : 'dark');
+  });
+</script>
+</body>
+</html>
