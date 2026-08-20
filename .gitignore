@@ -23,3 +23,9 @@
 # Python noise from running templates/skill-home/tests/
 __pycache__/
 *.pyc
+
+# Internal working artifacts. This repo is a public plugin source; planning
+# docs and verification run records are session exhaust, not distributed
+# content. docs/publish-path.md stays tracked — README links it.
+docs/plans/
+docs/verification/
