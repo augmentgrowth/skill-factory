@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>Restore AI Training — Claude Tag: Multiplayer Claude in Slack</title>
+<style>
+  :root {
+    --bg: #FAF9F5; --surface: #FFFFFF; --surface-2: #F2F0E9; --border: #E3DFD5;
+    --text: #1F1E1D; --muted: #6C6A65; --faint: #8F8C85;
+    --accent: #D97757; --accent-soft: #FBEFE9;
+    --green: #4F7A52; --green-soft: #EDF3ED; --amber: #8A6426; --amber-soft: #FBF4E5;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    --sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Helvetica, Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1F1E1D; --surface: #262624; --surface-2: #2E2C2A; --border: #3C3936;
+      --text: #F5F4EF; --muted: #A8A49D; --faint: #8A867F;
+      --accent: #E08A6B; --accent-soft: #3A2A24; --green: #8FBF93; --green-soft: #26302A;
+      --amber: #E3B768; --amber-soft: #342D20;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #1F1E1D; --surface: #262624; --surface-2: #2E2C2A; --border: #3C3936;
+    --text: #F5F4EF; --muted: #A8A49D; --faint: #8A867F;
+    --accent: #E08A6B; --accent-soft: #3A2A24; --green: #8FBF93; --green-soft: #26302A;
+    --amber: #E3B768; --amber-soft: #342D20;
+  }
+  :root[data-theme="light"] {
+    --bg: #FAF9F5; --surface: #FFFFFF; --surface-2: #F2F0E9; --border: #E3DFD5;
+    --text: #1F1E1D; --muted: #6C6A65; --faint: #8F8C85;
+    --accent: #D97757; --accent-soft: #FBEFE9; --green: #4F7A52; --green-soft: #EDF3ED;
+    --amber: #8A6426; --amber-soft: #FBF4E5;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--sans); line-height: 1.58; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 0 24px 80px; }
+
+  .topbar { position: fixed; top: 16px; right: 16px; z-index: 20; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+  .topbar button { background: var(--surface); border: 1px solid var(--border); color: var(--muted); border-radius: 8px; padding: 7px 11px; font: inherit; font-size: 12px; cursor: pointer; }
+  .topbar button:hover { color: var(--text); border-color: var(--accent); }
+  .topbar button.primary { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); font-weight: 650; }
+  .nav-btn { display: none; }
+  button:focus-visible, summary:focus-visible, a:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+
+  header.slide { padding: 64px 0 8px; }
+  .eyebrow { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-weight: 650; margin-bottom: 14px; }
+  h1 { font-size: clamp(30px, 4.2vw, 44px); line-height: 1.12; margin: 0 0 16px; letter-spacing: -0.025em; text-wrap: balance; }
+  .lede { font-size: 18px; color: var(--muted); margin: 0 0 26px; }
+  .lede strong { color: var(--text); font-weight: 650; }
+  .stats { display: flex; flex-wrap: wrap; gap: 10px; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; min-width: 128px; }
+  .stat .n { font-size: 22px; font-weight: 650; letter-spacing: -0.01em; }
+  .stat .l { font-size: 12px; color: var(--faint); margin-top: 2px; }
+
+  hr.rule { border: 0; border-top: 1px solid var(--border); margin: 40px 0; }
+  .step { padding: 8px 0; }
+  .step-head { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+  .step-num { background: var(--accent-soft); color: var(--accent); border-radius: 6px; font-size: 12px; font-weight: 700; padding: 3px 9px; font-family: var(--mono); white-space: nowrap; }
+  .step-time { margin-left: auto; font-size: 12px; color: var(--faint); font-family: var(--mono); white-space: nowrap; }
+  h2 { font-size: 24px; margin: 0; letter-spacing: -0.01em; line-height: 1.2; }
+  h3 { font-size: 16px; margin: 22px 0 6px; }
+  .sub { color: var(--muted); margin: 0 0 18px; font-size: 15px; }
+  p { margin: 0 0 12px; }
+  ul { margin: 8px 0 14px; padding-left: 22px; }
+  li { margin: 4px 0; }
+
+  .prompt-wrap { position: relative; margin: 14px 0; }
+  pre.prompt { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 48px 18px 16px; font-family: var(--mono); font-size: 13px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; }
+  .copy { position: absolute; top: 10px; right: 10px; z-index: 2; background: var(--surface-2); border: 1px solid var(--border); color: var(--muted); border-radius: 6px; padding: 4px 10px; font: inherit; font-size: 11px; cursor: pointer; }
+  .copy.done { background: var(--green-soft); color: var(--green); border-color: var(--green); }
+  .prompt-label { position: absolute; top: 13px; left: 18px; z-index: 1; font: 700 10.5px/1 var(--sans); text-transform: uppercase; letter-spacing: .07em; color: var(--faint); }
+
+  .expect, .callout, .warning { border: 1px solid var(--border); border-radius: 8px; padding: 13px 16px; margin: 14px 0; font-size: 14px; }
+  .expect { background: var(--green-soft); border-left: 3px solid var(--green); }
+  .callout { background: var(--surface); border-left: 3px solid var(--accent); }
+  .warning { background: var(--amber-soft); border-left: 3px solid var(--amber); }
+  .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; font-weight: 700; display: block; margin-bottom: 4px; }
+  .expect .lbl { color: var(--green); }
+  .warning .lbl { color: var(--amber); }
+  .youdo { display: inline-block; background: var(--accent-soft); color: var(--accent); font-size: 11.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; border-radius: 4px; padding: 2px 8px; margin: 4px 0 8px; }
+
+  details { background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; margin: 14px 0; font-size: 13.5px; color: var(--muted); }
+  details summary { cursor: pointer; font-weight: 700; color: var(--text); }
+  details.fac { border-style: dashed; }
+  details.fac summary { font-size: 11.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--faint); }
+  details .prompt-wrap { color: var(--text); }
+  details p:first-of-type { margin-top: 10px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 12px 0; }
+  th, td { text-align: left; padding: 9px 11px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--faint); font-weight: 650; }
+  td b { color: var(--text); }
+  code { font-family: var(--mono); font-size: .92em; }
+  footer { color: var(--faint); font-size: 13px; padding-top: 8px; }
+  .ff { font-family: var(--mono); font-size: 12px; }
+  a { color: var(--accent); }
+
+  .progress { display: none; }
+  body.present .wrap { max-width: 980px; }
+  body.present .slide { display: none; }
+  body.present .slide.active { display: block; min-height: 100vh; padding: 78px 0 64px; overflow-y: auto; animation: fade .18s ease; }
+  body.present hr.rule { display: none; }
+  body.present .slide.active h2 { font-size: clamp(28px, 3.5vw, 38px); }
+  body.present .slide.active .sub, body.present .slide.active > p { font-size: 17px; }
+  body.present .slide.active pre.prompt { font-size: 14px; max-height: 48vh; overflow-y: auto; overscroll-behavior: contain; }
+  body.present .slide.active table { font-size: 15px; }
+  body.present footer { display: none; }
+  body.present .nav-btn { display: inline-block; }
+  body.present .progress { display: block; position: fixed; bottom: 16px; right: 16px; z-index: 20; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; scroll-behavior: auto !important; } }
+  @media (max-width: 640px) {
+    .wrap { padding: 0 16px 56px; }
+    .topbar { top: 8px; right: 8px; left: 8px; }
+    header.slide { padding-top: 84px; }
+    .step-head { align-items: flex-start; flex-wrap: wrap; }
+    .step-time { width: 100%; margin-left: 0; }
+    h2 { font-size: 21px; }
+    th, td { padding: 8px 6px; }
+    body.present .slide.active { padding: 88px 0 60px; }
+  }
+</style>
+</head>
+<body>
+<nav class="topbar" aria-label="Lesson controls">
+  <button id="prev" class="nav-btn" type="button" aria-label="Previous card">← prev</button>
+  <button id="next" class="nav-btn" type="button" aria-label="Next card">next →</button>
+  <button id="mode" class="primary" type="button" aria-pressed="false">▶ present</button>
+  <button id="tt" type="button" aria-label="Toggle light and dark theme">◐ theme</button>
+</nav>
+<noscript>
+  <style>.topbar { display: none; }</style>
+  <div class="wrap" role="note" style="padding-top:24px;color:var(--muted)">Guide mode is fully readable below. Present, theme, and copy controls require JavaScript.</div>
+</noscript>
+<div class="progress" id="prog" role="status" aria-live="polite"></div>
+<main class="wrap" id="lesson">
+
+<header class="slide" tabindex="-1">
+  <div class="eyebrow">Restore AI Training · Aug 27</div>
+  <h1>Claude Tag: multiplayer Claude in Slack</h1>
+  <p class="lede">Claude Tag brings Claude into the place the team is already working. The useful difference is not just convenience: the work is <strong>shared, inspectable, and correctable together</strong>.</p>
+  <div class="stats">
+    <div class="stat"><div class="n">30 min</div><div class="l">basics, setup, live work</div></div>
+    <div class="stat"><div class="n">5 cards</div><div class="l">one participant guide</div></div>
+    <div class="stat"><div class="n">1 review</div><div class="l">before any broader share</div></div>
+  </div>
+  <div class="callout">
+    <p><b>The beginner rule:</b> the channel is the boundary for shared context, access, and behavior. Restate critical context near your mention, verify what Claude can access now, and never assume a connection guarantees a specific action.</p>
+  </div>
+  <details class="fac"><summary>Facilitator notes</summary>
+    <ul>
+      <li>Open with: “Claude Code and Codex are single-player deep-work spaces. Claude Tag is multiplayer Claude: the team can see the request, inspect the work, and improve it together.”</li>
+      <li>Set the expectation: the first ten minutes are the mental model and access check; the rest is a practical leadership-update demo.</li>
+    </ul>
+  </details>
+</header>
+
+<hr class="rule">
+
+<section class="slide step" tabindex="-1">
+  <div class="step-head"><span class="step-num">STEP 1</span><h2>Choose the right work surface</h2><span class="step-time">4 min</span></div>
+  <p class="sub">Use Claude Tag when the work should happen with the team, not merely be pasted back afterward.</p>
+  <table>
+    <tr><th>Use</th><th>Best for</th><th>Boundary</th></tr>
+    <tr><td><b>Tag Claude in a channel</b></td><td>Shared projects, summaries, team drafts, decisions, and corrections everyone should see.</td><td>The channel’s current context and configured access.</td></tr>
+    <tr><td><b>DM or individual Claude</b></td><td>Private exploration, personal connectors, or work that is not ready for the team.</td><td>Your own conversation and currently available connections.</td></tr>
+    <tr><td><b>Claude Code or Codex</b></td><td>Deep individual work with local files or repositories, private exploration, and technical implementation.</td><td>Your local project and the access you explicitly provide.</td></tr>
+  </table>
+  <div class="warning"><span class="lbl">Do not overread “memory”</span><p>Claude can use nearby thread and channel context, but it is not a perfect transcript or guaranteed recall system. Put the decisive fact, date, or constraint close to <code>@Claude</code> and link the source when possible.</p></div>
+  <details>
+    <summary>Optional quick habit — steer durable memory safely</summary>
+    <p>Claude may automatically save useful notes. You can also ask it to remember a stable preference, rule, or piece of context for future work. Public-channel memories may be shared across the workspace; private-channel and DM boundaries can differ.</p>
+    <p>Never save secrets or sensitive personal, patient, customer, client, financial, or credential data. Ask Claude what it remembers, then correct or delete stale memory when that control is supported.</p>
+    <div class="prompt-wrap">
+      <span class="prompt-label">Copy-paste memory pattern</span>
+      <pre class="prompt">@Claude, remember this for future work in this [workspace/channel]: [durable preference, rule, or context].
+
+Do not save secrets, credentials, personal data, patient data, customer data, or client data. I have not included any sensitive values in this message. Tell me exactly what you saved and where it applies. If you cannot save or inspect memory here, say so.</pre>
+    </div>
+  </details>
+  <div class="expect"><span class="lbl">Quick check</span><p>If a teammate should be able to see, correct, or reuse the work, start in the appropriate shared channel. If not, start in an individual surface.</p></div>
+  <details class="fac"><summary>Facilitator notes</summary>
+    <ul>
+      <li>Say: “The channel is the boundary” is a useful operating rule, not a promise about exact memory depth or every connector mechanic.</li>
+      <li>Ask for one example the room would keep individual and one they would make shared.</li>
+    </ul>
+  </details>
+</section>
+
+<hr class="rule">
+
+<section class="slide step" tabindex="-1">
+  <div class="step-head"><span class="step-num">STEP 2</span><h2>Run the access preflight</h2><span class="step-time">6 min · setup</span></div>
+  <p class="sub">Spend setup time on purpose. Verify access before asking Claude to produce the real deliverable.</p>
+  <span class="youdo">Live setup — 6 min</span>
+  <div class="prompt-wrap">
+    <span class="prompt-label">Copy-paste access check</span>
+    <pre class="prompt">@Claude, run a read-only access preflight for this supervised demo.
+
+1. Check whether you can read each of these Slack channels now:
+- [APPROVED CHANNEL 1]
+- [APPROVED CHANNEL 2]
+- [APPROVED CHANNEL 3]
+- [APPROVED CHANNEL 4]
+- [APPROVED CHANNEL 5]
+- [APPROVED CHANNEL 6]
+- [APPROVED CHANNEL 7]
+- [APPROVED CHANNEL 8]
+
+Return a table with one row per channel: readable, not readable, or uncertain. Do not summarize channel content yet.
+
+2. Resolve the exact Google Drive folder named “Demo — Leadership Updates — Drafts”. Report its URL or stable ID and effective audience. Confirm there is exactly one match and that access is limited to approved internal reviewers. If there are multiple matches or broader inherited access, mark the preflight failed. Do not create the folder or document yet. Do not change permissions.
+
+3. Confirm this originating Slack thread is an approved internal review destination with no external participants, guests, Slack Connect members, executive audience, or broader public audience. If you cannot verify that, mark the preflight failed.
+
+4. State exactly what you verified and what remains uncertain. Do not touch Asana. Do not post, send, share, invite, or create anything. Stop after the preflight and wait for the leadership-update prompt.</pre>
+  </div>
+  <div class="expect"><span class="lbl">Go / no-go signal</span><p>Before running, the facilitator replaces all eight placeholders with the approved private channel list. Success is eight explicit channel results plus a separate Google Drive capability result. “Uncertain” counts as not verified. If any channel is unreadable, use the fallback in Step 3 rather than accepting a silent partial update.</p></div>
+  <div class="callout"><p><b>Known Restore state for this lesson:</b> Google Drive is connected; Slack public channels are configured; Asana is connected. Granola access to the intended shared-notes folder is currently unverified or nonfunctional. External connections are not Slack channels, so do not add one to the channel source list.</p></div>
+  <details class="fac"><summary>Facilitator notes</summary>
+    <ul>
+      <li>If setup fails, that is a useful result. Name the gap; do not improvise around it or burn the practical half of the lesson debugging permissions.</li>
+      <li>Transition: “Now we know what Claude can actually see today. We can make a prompt that refuses to hide anything it cannot see.”</li>
+    </ul>
+  </details>
+</section>
+
+<hr class="rule">
+
+<section class="slide step" tabindex="-1">
+  <div class="step-head"><span class="step-num">STEP 3</span><h2>Draft the leadership update</h2><span class="step-time">10 min · live demo</span></div>
+  <p class="sub">Ask for a complete, source-linked private draft first. The executive audience does not receive anything yet.</p>
+  <span class="youdo">Facilitator demo — 10 min</span>
+  <details id="main-prompt">
+    <summary>Main prompt — complete access</summary>
+    <div class="prompt-wrap">
+      <span class="prompt-label">Copy-paste main prompt</span>
+      <pre class="prompt">@Claude, prepare a private draft of the executive leadership weekly growth update for the rolling 7 days ending now.
+
+SOURCES — before running, replace every placeholder below with the facilitator’s approved private channel list, then review all eight explicitly:
+- [APPROVED CHANNEL 1]
+- [APPROVED CHANNEL 2]
+- [APPROVED CHANNEL 3]
+- [APPROVED CHANNEL 4]
+- [APPROVED CHANNEL 5]
+- [APPROVED CHANNEL 6]
+- [APPROVED CHANNEL 7]
+- [APPROVED CHANNEL 8]
+
+Use only information you can actually read. External connections are not Slack channels; do not add one to this source list. Treat learning-channel and test-channel discussion as relevant only when it materially changes a growth result, active project, risk, blocker, or decision. Exclude general learning chatter, experiments with no decision, duplicates, and stale context.
+
+OUTPUT PRIORITY
+1. Growth results
+2. Project progress
+3. Risks and blockers
+4. Decisions needed
+
+REQUIRED EVIDENCE AND QUALITY RULES
+- Link back to supporting Slack messages or threads when possible.
+- Label every statement as Fact, Inference, or Missing information.
+- Never invent or estimate a metric. If leads, bookings, revenue, conversion rate, cost per lead, or another expected number is missing, write “Missing — owner/source needed.”
+- Name every unreadable or uncertain channel and explain how that gap could affect the update.
+- Do not silently produce an update that appears complete when access or evidence is incomplete.
+- Deduplicate repeated updates across channels. Prefer the newest source and preserve meaningful disagreement.
+- Keep the executive draft concise: opening snapshot, then no more than 3 bullets in each priority section, followed by Sources checked and Gaps. Aim for 700 words or fewer.
+- Use scrubbed or generic wording. Do not include sensitive personal, customer, patient, credential, or confidential details.
+
+AUTHORIZED WORKING-DRAFT FLOW
+A. Confirm all eight channel results. Also confirm this originating thread is an approved internal review destination with no external participants, guests, Slack Connect members, executive audience, or broader public audience. If any channel or destination check is unreadable, uncertain, or failed, stop before synthesis and use the partial-access fallback. Do not create or post a misleadingly incomplete update.
+B. If every check passes, immediately create the full update in the exact preflighted “Demo — Leadership Updates — Drafts” folder. Use the verified URL or stable ID, not a new search by name. Proceed only when its effective audience is limited to approved internal reviewers. Do not invite anyone or broaden access. Private draft creation is authorized by this prompt.
+C. Immediately post only a concise summary and the document link in the verified internal originating Slack thread for Malachi’s review. Do not paste the full update into Slack. This review-thread post is authorized by this prompt.
+D. Do not share with the executive team, post in an executive channel, email anyone, create or edit Asana tasks, or change permissions. Those actions require a separate explicit approval after Malachi reviews the draft.
+
+Before creating anything, report and stop if a requested step is unsupported, any channel is unreadable, or the destination/privacy boundary is uncertain. Never substitute a different destination or broader permission.</pre>
+    </div>
+  </details>
+  <details>
+    <summary>Fallback prompt — one or more channels are unreadable</summary>
+    <div class="prompt-wrap">
+      <span class="prompt-label">Copy-paste partial-access fallback</span>
+      <pre class="prompt">@Claude, do not present an incomplete weekly update as complete.
+
+Using the access preflight, list:
+1. Readable channels and the date range actually covered.
+2. Unreadable or uncertain channels.
+3. Which growth results, projects, risks, or decisions may be missing because of each gap.
+
+Then create a clearly labeled “PARTIAL DRAFT — NOT READY TO SHARE” outline using only readable sources. Include source links when possible, label facts versus inference, flag missing numbers, and do not invent metrics.
+
+Do not create a Google Doc, post to Slack, change permissions, touch Asana, or share anything. Ask me to choose whether to fix access or explicitly authorize a partial private draft. Stop and wait.</pre>
+    </div>
+  </details>
+  <div class="warning"><span class="lbl">Fictional demo metrics only</span><p>If numbers are needed to explain the format, label them “SAMPLE — FICTIONAL”: 1,240 leads; 148 bookings; $92,000 revenue; 11.9% lead-to-booking conversion; $42 cost per lead. Never let sample values appear as Restore results.</p></div>
+  <div class="expect"><span class="lbl">What success looks like</span><p>With complete access, Claude creates one private draft immediately and posts one concise review link in the originating thread. With incomplete access, it stops before synthesis. Nothing reaches executives and permissions do not expand.</p></div>
+  <details class="fac"><summary>Facilitator notes</summary>
+    <ul>
+      <li>The prompt was stress-tested against partial access, invented metrics, missing source links, irrelevant learning/test noise, overlong output, permission expansion, and accidental executive sharing.</li>
+      <li>Say: “This prompt already authorizes the private working draft and its review-thread link. Executive delivery, wider permissions, external sends, and downstream system changes still require a separate yes.”</li>
+    </ul>
+  </details>
+</section>
+
+<hr class="rule">
+
+<section class="slide step" tabindex="-1">
+  <div class="step-head"><span class="step-num">STEP 4</span><h2>Correct it together</h2><span class="step-time">4 min · shared correction</span></div>
+  <p class="sub">The demo is not finished when Claude posts a link. It is finished when the team improves the shared work.</p>
+  <span class="youdo">Participant move — 2 min</span>
+  <p>Ask one participant to correct a real assumption in the Slack thread—scope, status, interpretation, or a missing owner—without introducing sensitive information. Then reply:</p>
+  <div class="prompt-wrap">
+    <span class="prompt-label">Copy-paste revision prompt</span>
+    <pre class="prompt">@Claude, treat the participant correction immediately above as a proposed correction to this draft.
+
+Before editing, state:
+1. What assumption is changing.
+2. Which section of the private draft will change.
+3. Whether any other claim or metric depends on that assumption.
+4. The supporting source link or named accountable owner. If neither is available, ask the facilitator to explicitly confirm the correction; otherwise keep it labeled unverified and stop.
+
+Then revise only the private Google Doc draft. Preserve source links, fact/inference labels, missing-number flags, and the existing private permissions. Add a short revision note in this thread for Malachi’s review.
+
+Do not share with executives, broaden permissions, create tasks, or post the full update. If the correction conflicts with a linked source, show the conflict and stop for a human decision.</pre>
+  </div>
+  <div class="expect"><span class="lbl">The multiplayer moment</span><p>Everyone sees the correction, Claude explains its impact, and the same private draft improves. The work is inspectable instead of disappearing inside one person’s chat.</p></div>
+  <details class="fac"><summary>Facilitator notes</summary>
+    <ul>
+      <li>Choose a correction with a visible downstream effect: “This test is still exploratory, not launched” is better than a spelling change.</li>
+      <li>If Claude resists or over-edits, that is teachable: narrow the requested change and restate the source-of-truth boundary.</li>
+    </ul>
+  </details>
+</section>
+
+<hr class="rule">
+
+<section class="slide step" tabindex="-1">
+  <div class="step-head"><span class="step-num">STEP 5</span><h2>Reuse the habit next</h2><span class="step-time">6 min · wrap</span></div>
+  <p class="sub">Shared context, explicit evidence, a private review draft, and approval before broader action—the same shape works beyond the leadership update.</p>
+  <table>
+    <tr><th>Scenario</th><th>First request</th><th>Approval boundary</th></tr>
+    <tr><td><b>Messy thread</b></td><td>“Summarize decisions, owners, open questions, and next steps. Link each item to the message that supports it.”</td><td>Review before posting a canonical recap.</td></tr>
+    <tr><td><b>Meeting notes → Asana</b></td><td>“Draft proposed tasks with owner, due-date assumption, source note, and acceptance criteria.”</td><td>Show proposals; create nothing until explicitly approved.</td></tr>
+    <tr><td><b>Weekly Growth Core digest</b></td><td>“Draft a concise rolling-7-day digest from the named approved channels; expose access gaps and missing metrics.”</td><td>Private/review draft before any broad post.</td></tr>
+    <tr><td><b>Prior decisions</b></td><td>“Search only approved shared notes for the decision, date, owner, and source link. State when access is unverified.”</td><td>No answer from an unverified Granola folder; use an approved readable source.</td></tr>
+  </table>
+  <div class="callout"><p><b>Try this next:</b> pick one active shared thread. Ask Claude for decisions, owners, open questions, next steps, and source links. Correct one assumption together before treating the recap as final.</p></div>
+  <details>
+    <summary>Optional bonus — individual connectors, Asana, Granola, and future routines</summary>
+    <ul>
+      <li><b>Individual connectors:</b> connector support reported around Aug 21 may broaden what an individual Claude surface can do. Treat it as an experiment until official documentation and live access are verified; do not promise parity with channel access.</li>
+      <li><b>Asana:</b> Restore has a connection, but begin with proposed tasks. Require explicit approval before creation or edits.</li>
+      <li><b>Granola:</b> access to the intended shared-notes folder is currently unverified or nonfunctional. Never teach “search all meeting notes” as guaranteed until a live preflight passes.</li>
+      <li><b>Ambient behavior and routines:</b> keep proactive posting off initially. Pilot a narrow, predictable routine only after the manual workflow is trusted, the destination is explicit, and review/stop rules are proven.</li>
+    </ul>
+  </details>
+  <details>
+    <summary>Facilitator resource — internal-comms blurb</summary>
+    <div class="prompt-wrap">
+      <span class="prompt-label">Copy blurb</span>
+      <pre class="prompt">Beginner-friendly Claude in Slack session—no coding required. We’ll turn a messy thread into decisions and next steps, search approved shared notes, and build a reviewable Growth/leadership update draft. We’ll also set clear boundaries for access, source links, writes, sends, and permission changes.</pre>
+    </div>
+  </details>
+  <div class="expect"><span class="lbl">Leave with this rule</span><p>Use the channel when the work should be shared. Verify access. Restate critical context. Ask for evidence and gaps. A private working draft and its review-thread link can be explicitly authorized in the prompt; get a separate approval before executive sharing, wider permissions, external sends, or downstream changes.</p></div>
+  <details class="fac"><summary>Facilitator notes</summary>
+    <ul>
+      <li>Close on one action, not a tour of advanced features. Ask each person which active thread they will try this on.</li>
+      <li>Remind the room that this page is the full leave-behind: all prompts and boundaries are here.</li>
+    </ul>
+  </details>
+</section>
+
+<footer class="slide" tabindex="-1">
+  <p class="ff">Public training artifact. All examples and metrics are scrubbed, generic, or explicitly fictional. Canonical lesson record: Restore AI Training vault. All training pages: <a href="index.html">training hub</a>. github.com/augmentgrowth/skill-factory</p>
+</footer>
+
+</main>
+<script>
+  (function () {
+    var root = document.documentElement;
+    var themeButton = document.getElementById('tt');
+    var modeButton = document.getElementById('mode');
+    var prevButton = document.getElementById('prev');
+    var nextButton = document.getElementById('next');
+    var progress = document.getElementById('prog');
+    var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+    var index = 0;
+
+    themeButton.addEventListener('click', function () {
+      var current = root.getAttribute('data-theme');
+      if (!current) current = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      root.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
+    });
+
+    document.querySelectorAll('pre.prompt').forEach(function (pre, number) {
+      var wrapper = pre.parentElement;
+      var button = document.createElement('button');
+      button.className = 'copy';
+      button.type = 'button';
+      button.textContent = 'copy';
+      button.setAttribute('aria-label', 'Copy prompt ' + (number + 1));
+      wrapper.appendChild(button);
+      button.addEventListener('click', function () {
+        var text = pre.textContent;
+        var copy = navigator.clipboard && navigator.clipboard.writeText
+          ? navigator.clipboard.writeText(text)
+          : Promise.reject(new Error('Clipboard unavailable'));
+        copy.then(function () {
+          button.textContent = 'copied';
+          button.classList.add('done');
+          setTimeout(function () { button.textContent = 'copy'; button.classList.remove('done'); }, 1600);
+        }).catch(function () {
+          var range = document.createRange();
+          var selection = window.getSelection();
+          range.selectNodeContents(pre);
+          selection.removeAllRanges();
+          selection.addRange(range);
+          button.textContent = 'selected — copy';
+        });
+      });
+    });
+
+    function show(nextIndex, focusSlide) {
+      index = Math.max(0, Math.min(slides.length - 1, nextIndex));
+      slides.forEach(function (slide, slideIndex) { slide.classList.toggle('active', slideIndex === index); });
+      progress.textContent = (index + 1) + ' / ' + slides.length;
+      prevButton.disabled = index === 0;
+      nextButton.disabled = index === slides.length - 1;
+      window.scrollTo(0, 0);
+      if (focusSlide) slides[index].focus({ preventScroll: true });
+    }
+
+    function setMode(present) {
+      document.body.classList.toggle('present', present);
+      modeButton.textContent = present ? '☰ guide' : '▶ present';
+      modeButton.setAttribute('aria-pressed', present ? 'true' : 'false');
+      if (present) show(index, true);
+      else {
+        slides.forEach(function (slide) { slide.classList.remove('active'); });
+      }
+      try { history.replaceState(null, '', present ? '?mode=present' : location.pathname); } catch (error) {}
+    }
+
+    modeButton.addEventListener('click', function () { setMode(!document.body.classList.contains('present')); });
+    prevButton.addEventListener('click', function () { show(index - 1, true); });
+    nextButton.addEventListener('click', function () { show(index + 1, true); });
+    document.addEventListener('keydown', function (event) {
+      if (!document.body.classList.contains('present')) return;
+      if (event.target.closest('button, a, summary, input, textarea, select, pre')) return;
+      if (event.key === 'ArrowRight' || event.key === ' ' || event.key === 'PageDown') { event.preventDefault(); show(index + 1, true); }
+      else if (event.key === 'ArrowLeft' || event.key === 'PageUp') { event.preventDefault(); show(index - 1, true); }
+      else if (event.key === 'Home') { event.preventDefault(); show(0, true); }
+      else if (event.key === 'End') { event.preventDefault(); show(slides.length - 1, true); }
+      else if (event.key === 'Escape') { setMode(false); modeButton.focus(); }
+    });
+
+    if (new URLSearchParams(location.search).get('mode') === 'present') setMode(true);
+  })();
+</script>
+</body>
+</html>
