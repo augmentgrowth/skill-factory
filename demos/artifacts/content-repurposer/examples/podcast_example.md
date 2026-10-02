@@ -1,5 +1,12 @@
 # Worked Example — Podcast Transcript to Content
 
+## Contents
+- Source Transcript (excerpt)
+- Extracted Material
+- Output: Tweet Thread
+- Output: LinkedIn Post
+- Output: Newsletter Draft (its own headings are part of the example)
+
 ## Source Transcript (excerpt)
 
 > **Host**: So you're saying most agencies are doing outbound completely wrong?
