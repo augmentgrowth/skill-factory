@@ -1,9 +1,12 @@
 # Content Repurposer — Templates
 
 ## Contents
-- Tweet Thread Template / Tweet rules
-- LinkedIn Post Template / LinkedIn rules
-- Newsletter Draft Template / Newsletter rules
+- Tweet Thread Template
+- Tweet rules
+- LinkedIn Post Template
+- LinkedIn rules
+- Newsletter Draft Template
+- Newsletter rules
 
 ## Tweet Thread Template
 

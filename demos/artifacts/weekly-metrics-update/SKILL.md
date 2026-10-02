@@ -140,7 +140,8 @@ a section on a $900 line, and ends with four things for leadership to decide.
 >   CPA. That's the price of the test and it's still inside target. Holding the budget.
 > • Meta prospecting is the one real dip — CPA $76→$90 on flat spend, conversions -16%.
 >   Reads like creative fatigue. Pulling frequency and CTR trend this week.
-> • Email delivered 86 conversions at no media cost, our best incremental return again.
+> • Email delivered 86 conversions at no media cost, our best incremental return again;
+>   keeping the twice-weekly cadence.
 > • Display remarketing conversions fell 12→4 — tag check, not a demand signal.
 > • Next week's update will carry revenue by channel; CPA alone can't tell us if nonbrand
 >   is buying worse customers or just pricier ones.
