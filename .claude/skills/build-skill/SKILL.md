@@ -193,6 +193,12 @@ baseline vs with-skill. **The builder judges.**
 
 ## Gotchas
 
+- **No sub-agent tool? Use a fresh headless session.** Steps 2, 5 and 6 each want a reader with no
+  memory of the draft. Where the harness cannot spawn sub-agents, start one with `claude -p "<the
+  instruction>"` from an empty folder (or the harness's equivalent), passing only the paths the
+  step names. Doing the independent audit yourself defeats it — say so if neither is available.
+  Found by the first cold build run, which had no Agent tool and improvised exactly this.
+
 - **Hot-load is not guaranteed.** A skill folder created mid-session may not appear in the
   `/` menu; always run the with-skill test by explicit invocation (name it or point the
   agent at its `SKILL.md`), never by relying on the menu.
