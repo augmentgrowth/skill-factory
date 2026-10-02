@@ -32,7 +32,7 @@ Build progress:
 - [ ] 2. Baseline input + no-skill output saved; birth save made
 - [ ] 3. Type named; split decided
 - [ ] 4. Draft written; Gotchas scaffolded
-- [ ] 5. Lint has no fix findings; six checks pass — if not, back to step 4
+- [ ] 5. Lint has no fix findings; six checks pass; independent audit has no open P1/P2 — if not, back to step 4
 - [ ] 6. Side-by-side shown; builder judged it a win — if lose/tie, back to step 4
 - [ ] 7. Saved, tagged, published; personal install offered
 ```
@@ -135,9 +135,18 @@ substitute it, use that folder's path) — and resolve every `fix` finding befor
 else; it catches the mechanical misses (limits, nesting, missing Contents lists, undeclared
 dependencies) so your own pass can spend its attention on judgment. Then run the six
 checks in `references/self-critique.md` (Voice / Principles / Anti-Pattern / Example /
-Model Calibration / Focus) and fix what
-fails **before showing the builder the draft**. Present an honest assessment: what
-improved, what is still weak, what you need answered.
+Model Calibration / Focus) and fix what fails.
+
+**Independent audit (every draft).** You wrote the draft, so you are the worst judge of it.
+Dispatch a **fresh sub-agent** with only three things: the draft's folder path, the path to
+`../audit-skill/SKILL.md` (relative to this skill's folder), and the instruction "Follow this
+audit skill's steps 1–4 on that one skill, report only — change nothing, and stop at the
+question." Fix every P1 and P2 it reports (or say in one line why a finding does not apply),
+re-run the lint, and only then show the builder the draft. P3 items go into the honest
+assessment for the builder to decide.
+
+Present the draft **with an honest assessment**: what improved, what is still weak, what you
+need answered.
 
 **Script efficiency pass (script-backed drafts only).** If the draft added or changed
 anything in `scripts/`, dispatch a **fresh sub-agent** to run the sibling

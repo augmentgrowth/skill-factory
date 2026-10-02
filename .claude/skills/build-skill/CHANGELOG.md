@@ -10,3 +10,4 @@ One line per change, newest last. Format: `[YYYY-MM-DD] What changed and why`.
 - [2026-10-02] Evaluator round 1: lint path resolves from the skill's own folder (`${CLAUDE_SKILL_DIR}`); Step 7 asks once whether a new skill is safe to publish and sets `public_safe: true`, so a factory clone's gate no longer silently strands every new skill.
 - [2026-10-02] Evaluator round 2: quality bar points at Step 5's lint command (reference files don't get `${CLAUDE_SKILL_DIR}` substituted); "factory clone" defined by its release gate; Codex fallback for the lint path.
 - [2026-10-02] Saved baseline case (input + judging rubric) so later changes to this skill can be replayed and proven safe.
+- [2026-10-02] Step 5 now dispatches a fresh sub-agent to run audit-skill's report on every draft (the author doesn't grade their own work); P1/P2 findings are fixed before the builder sees the draft.
