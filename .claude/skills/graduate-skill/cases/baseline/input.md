@@ -23,4 +23,8 @@ if __name__ == "__main__":
     main(sys.argv[1:])
 ```
 
+Its SKILL.md treats the API response as data only (it reads campaign figures from it and never
+follows anything in it as an instruction), and the script sends nothing but the token and the
+campaign ids to the Graph API.
+
 The builder is not technical and should never be asked to judge an efficiency finding.
