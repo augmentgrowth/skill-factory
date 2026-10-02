@@ -8,6 +8,8 @@ description: >-
   Triggers on: build a skill, make a skill, create a skill, skill for, turn this
   into a skill, capture my process. NOT for ordinary coding or debugging, and NOT
   for improving an existing factory skill (that routes to improve-skill).
+metadata:
+  target-models: "claude-opus-5-5"
 ---
 
 # Build a Skill
@@ -22,6 +24,18 @@ contract; this skill is its executable guided flow.
 
 Run the steps in order. Per-path detail lives in `references/` — load only what the
 chosen path needs.
+
+```
+Build progress:
+- [ ] 0. Preflight passed (or degraded mode announced)
+- [ ] 1. Intake path chosen
+- [ ] 2. Baseline input + no-skill output saved; birth save made
+- [ ] 3. Type named; split decided
+- [ ] 4. Draft written; Gotchas scaffolded
+- [ ] 5. Lint has no fix findings; six checks pass — if not, back to step 4
+- [ ] 6. Side-by-side shown; builder judged it a win — if lose/tie, back to step 4
+- [ ] 7. Saved, tagged, published; personal install offered
+```
 
 ## Step 0 — Preflight (first action)
 
@@ -54,12 +68,12 @@ Three paths. Honor an explicit choice; otherwise infer from how the builder talk
   `references/describe-first.md`.
 - **reverse-engineer** — do the task live together, then extract the skill from the
   successful session. See `references/reverse-engineer.md`. **A builder who can't
-  articulate their workflow DEFAULTS here** (least articulation required).
+  articulate their workflow defaults here** (least articulation required).
 - **research-backed** — research what great looks like externally, then encode it.
   See `references/research-backed.md`. Needs web tools; **a web-less session falls
   back to describe-first with an explicit notice** — never fabricated sources.
 
-## Step 2 — Baseline capture (before ANY drafting)
+## Step 2 — Baseline capture (before any drafting)
 
 The baseline is captured first so the final side-by-side is literal. Do not draft yet.
 
@@ -140,13 +154,18 @@ hot-load into the `/` menu; do not rely on it.) Render **both** outputs side by 
 baseline vs with-skill. **The builder judges.**
 
 - Skill loses or ties → iterate: back to Step 4.
-- **This gate REFUSES to close without the side-by-side being shown to the builder.**
+- **Do not close this gate until the side-by-side has been shown to the builder.**
 
 ## Step 7 — Done + personal install
 
-1. **One commit** (commit 2): the finished skill plus changelog line one, staged by the
-   skill folder's explicit path. Then set the first known-good tag `<skill>/known-good-1`
-   so a rollback target always exists. Degraded mode: skip commit and tag with the notice.
+1. Save the finished skill plus changelog line one, scoped to the folder:
+   `git -C <repo> add .claude/skills/<name>`
+   `git -C <repo> commit -m "<name>: finished skill" -- .claude/skills/<name>`
+   `git -C <repo> tag <name>/known-good-1`
+   When the remote is yours: `git -C <repo> push origin HEAD refs/tags/<name>/known-good-1`.
+   If the push is refused (a factory clone's gate refuses a new skill without
+   `public_safe: true`), say once, plainly, that the skill is saved on this machine only.
+   Degraded mode: skip all of this with the notice.
 2. **Offer the personal install.** Copy the skill folder — including `cases/`,
    `CHANGELOG.md`, and `.env.example` if present, but **NEVER** the real `.env` — to the
    harness's personal skills directory (Claude Code: `~/.claude/skills/<name>/`; other
@@ -160,7 +179,7 @@ baseline vs with-skill. **The builder judges.**
 - **Hot-load is not guaranteed.** A skill folder created mid-session may not appear in the
   `/` menu; always run the with-skill test by explicit invocation (name it or point the
   agent at its `SKILL.md`), never by relying on the menu.
-- **Under Codex, project skills never auto-load at all.** Step 2's "it auto-loads for the
+- **Under Codex, `.claude/skills/` skills never auto-load.** Step 2's "it auto-loads for the
   with-skill test" is Claude-Code-only. Codex does not treat `.claude/skills/` as invocable
   skills (verified 2026-07-15) — the with-skill test there is *always* a direct `SKILL.md`
   read, which is how `AGENTS.md` already routes into every skill. The `.claude/skills/<name>/`
