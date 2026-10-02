@@ -160,9 +160,8 @@ add) and commit only that folder:
 `git -C <repo> commit -m "Audit fixes for <skill>: C4, D1" -- <skill-folder>`. Never rewrite or
 amend earlier history.
 
-Publishing depends on whose repo this is:
-
-After each save, tag the new state `<skill>/review-<n>` (same number as its rollback tag). Then:
+After each save, tag the new state `<skill>/review-<n>` (same number as its rollback tag).
+Publishing then depends on whose repo this is:
 
 - **A repo that carries the factory's release gate**: the builder's approval covers publishing, as
   with learn-from-session. Publish the branch and both tags in one push:
