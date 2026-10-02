@@ -145,10 +145,11 @@ If the builder asks for the diff, show the raw diff too — the request wins ove
 
 ## 7. Save
 
-In a git repo, save each changed skill on its own: stage only that skill's folder by explicit path
-(`git -C <repo> add <skill-folder>`, never a repo-wide add), commit only that folder:
-`git -C <repo> commit -m "Audit fixes for <skill>: C4, D1" -- <skill-folder>`, and append one line
-to its `CHANGELOG.md` if it has one (`[YYYY-MM-DD] Audit: <what changed>`). Never rewrite or
+In a git repo, save each changed skill on its own. First append one line to its `CHANGELOG.md` if
+it has one (`[YYYY-MM-DD] Audit: <what changed>`), so the line rides in the same save. Then stage
+only that skill's folder by explicit path (`git -C <repo> add <skill-folder>`, never a repo-wide
+add) and commit only that folder:
+`git -C <repo> commit -m "Audit fixes for <skill>: C4, D1" -- <skill-folder>`. Never rewrite or
 amend earlier history.
 
 Publishing depends on whose repo this is:
