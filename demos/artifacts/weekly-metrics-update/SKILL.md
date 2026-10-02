@@ -1,11 +1,11 @@
 ---
 name: weekly-metrics-update
-description: Turn a weekly channel/marketing metrics export into the leadership
+description: "Turns a weekly channel/marketing metrics export into the leadership
   update in our house format — verdict first, five bullets, every bullet ending in
   an action. Use when writing the weekly update, the Monday update, the leadership
   or exec update from a channel export, spend report, or performance CSV. Triggers
   on: weekly update, weekly channel update, leadership update, exec update, Monday
-  update, write the update from this export, turn this export into an update.
+  update, write the update from this export. Not for updates without an export."
 ---
 
 # Weekly Metrics Update
@@ -106,6 +106,12 @@ Plain sentences. No headers beyond the verdict and the bullets. No tables — th
 read on a phone. Never write "it is worth noting that." Our vocabulary: *blended CPA*,
 *nonbrand*, *prospecting* vs. *retargeting*, *the target*, *cost of test*. Say "we,"
 not "the team."
+
+## Before you hand it over
+
+Check the draft against the house rules and rewrite whatever fails, then check again: the first
+sentence states blended CPA against the $65 target; at most five bullets, each ending in a next
+action; no % change on a line under ~20 conversions; no headers beyond the verdict, no tables.
 
 ## What good looks like
 

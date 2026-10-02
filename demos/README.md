@@ -31,7 +31,7 @@ had no way to know.
 rather than takeable on faith:
 
 ```
-SKILL.md                          the skill that got built (175 lines)
+SKILL.md                          the skill that got built (181 lines)
 CHANGELOG.md                      line one, written at birth
 cases/baseline/input.md           the frozen sample export
 cases/baseline/output-baseline.md the no-skill output — captured before drafting
