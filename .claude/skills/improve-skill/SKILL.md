@@ -22,6 +22,10 @@ fail — it is deliberately mechanical, takes no lock, and never blocks the buil
 per-skill lock. Step 4 is the handoff. A session that can do both does both; a session that cannot
 spawn a background agent stops after capture and the case waits in the queue.
 
+**Nothing failed?** A skill that works but may be out of date with current authoring guidance is an
+audit, not an anneal: route it to `audit-skill`, which reports against the factory rubric and edits
+only what the builder approves. An audit finding that turns out to be a live failure comes back here.
+
 **The skill you are fixing may live nowhere near where you are standing.** Skills are served
 through links, so never assume the current directory is the skill's home — Step 2 resolves it.
 
@@ -169,7 +173,8 @@ Stage the skill folder **by explicit path** (`git -C <repo> add <skill-folder>`)
 commit containing all four:
 
 - the fix,
-- a new entry under `## Gotchas` in the skill's `SKILL.md` capturing what was learned,
+- a new entry under `## Gotchas` in the skill's `SKILL.md` capturing what was learned — narrow to
+  the failure this case exercised, never a universal rule drawn from one example,
 - one appended line in the skill's `CHANGELOG.md`: `[YYYY-MM-DD] What changed and why`,
 - `cases/<YYYY-MM-DD>-<slug>/.annealed` — a one-line marker (`<ISO date> green`) that takes this
   case out of the queue. **No marker, no exit:** an unmarked case is re-annealed forever.

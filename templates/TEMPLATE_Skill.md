@@ -1,53 +1,102 @@
 ---
-name: [skill-name-kebab-case]
-description: [TRIGGER MECHANISM, not a summary. Write it so Claude fires the
-  skill at the right moment: activation keywords + "Use when…" phrasing.
+name: [skill-name-kebab-case — must equal the folder name]
+description: >-
+  [TRIGGER MECHANISM, not a summary. Third-person WHAT + an explicit
+  "Use when…" + the phrases a user actually says + a boundary if a neighbouring
+  skill could misroute. No catch-all capability lists. Aim for ~500 chars, hard cap 1,024.
+  Keep the `>-` line above: a plain value containing ": " breaks YAML and the
+  skill silently loads with no description.
   Bad:  "Generates cold outreach emails."
-  Good: "Write cold outreach that gets replies. Use when drafting a cold email,
-         LinkedIn DM, or first-touch message to a prospect. Triggers on: cold
-         email, cold outreach, first-touch, prospecting message."]
+  Good: "Writes cold outreach that gets replies. Use when drafting a cold email,
+         LinkedIn DM, or first-touch message to a prospect — 'cold email',
+         'prospecting message', 'first touch'. Not for replies to inbound leads."]
+metadata:
+  target-models: "[model ids this was written and tested for, e.g. claude-opus-5-5]"
 # static: true   # OPTIONAL. Default (this line absent) = self-annealing ON:
 #                # the skill fixes itself on failure (see Improvement protocol).
 #                # Set static: true to freeze the skill — it never self-modifies,
-#                # and you MUST delete the Improvement protocol block below.
+#                # and delete the Improvement protocol block below. (claude.ai
+#                # upload and the Skills API reject this key; strip it from any
+#                # copy you upload there.)
 ---
 
 <!--
 HOW TO USE THIS TEMPLATE
-The frontmatter block above MUST stay the first thing in the file — harnesses
-parse it only at the top. Fill every [bracketed] slot, then delete the guidance
-comments. A finished SKILL.md teaches Claude to think like an expert at this
-task — it is not documentation. Say WHY, not just WHAT. Cut anything that
-doesn't change output.
+The frontmatter block above stays the first thing in the file — harnesses parse
+it only at the top. Fill every [bracketed] slot, then delete the guidance
+comments. The full checklist this draft is judged against is the factory rubric:
+.claude/skills/audit-skill/references/rubric.md.
+
+WRITE FOR CURRENT MODELS. Plain imperatives plus the reason ("Use the ledger
+total, because the export double-counts refunds"). Not shouting: all-caps
+MUST/NEVER/CRITICAL makes current models over-apply a rule. Not over-explaining:
+cut anything Claude would do right without being told. Never ask the skill to
+write out its reasoning; ask for a short explanation instead. Never add a generic
+"double-check your work" — use a concrete check (see the validation slot below).
+
+PUT THE KEY RULES FIRST. Skill text is read once; after a long session only the
+first ~5k tokens survive. Instructions are standing ("when X, do Y"), not
+one-time steps that assume a re-read.
 
 SCOPE: One capability per skill. If a piece of logic would be reusable in
 another workflow, split it into its own atomic skill and reference it by name
 (see taxonomy.md, the one-or-many rule). Keep SKILL.md under 500 lines; move
-deep material into references/ one level deep, loaded on demand.
+deep material into references/ one level deep — every reference linked straight
+from this file with WHEN to read it, split by area, and any reference over 100
+lines opening with a Contents list.
 -->
 
 # [Skill Name]
 
 <!--
 OPENING (2-3 sentences): frame the problem and what Claude gets WRONG by
-default. Establish the domain's voice. Do NOT restate what Claude already
-knows how to do — only what it needs that it wouldn't reach for on its own.
+default. Do NOT restate what Claude already knows how to do — only what it
+needs that it wouldn't reach for on its own.
 -->
 [What this makes Claude good at, and the default failure it corrects.]
 
 ## Instructions
 
 <!--
-DEGREES-OF-FREEDOM MATCHING — the core authoring choice:
-- Judgment / interpretation / adapting to context  → PROSE. State the
-  principle and the WHY; let Claude adapt. Don't script what needs thinking.
-- Fragile / deterministic / exact operations (commands, API calls, file
-  paths, formats) → EXACT text or a script in scripts/. Don't paraphrase what
-  must be literal; a wrong flag fails silently.
-Match the specificity of your writing to how much the agent should adapt.
+STRICTNESS MATCHES FRAGILITY — for each step ask "what happens if Claude does
+this differently?"
+- Nothing much (wording, judgment, adapting to context) → PROSE. State the goal
+  and the WHY; give one default, not a menu of options.
+- Consequential (money, deleting, sending, publishing, irreversible) → an EXACT
+  command or a script in scripts/, with the approval point right before the
+  action and a stopping condition for any retry. A wrong flag paraphrased into
+  prose fails silently.
 -->
 [Principles and process. Prose where the agent should think; exact commands or
 `scripts/<name>` where the operation is fragile.]
+
+<!--
+ORDERED JOB? (delete if order doesn't matter) Give a checklist Claude copies into
+its response and ticks off, with a loop-back line for every check that can fail.
+-->
+```
+Progress:
+- [ ] 1. [step]
+- [ ] 2. [step]
+- [ ] 3. [check] — if it fails, go back to step [N]
+```
+
+<!--
+QUALITY MATTERS? (delete if not) Name the concrete check — a script, a rubric, a
+reference file, the source data — then fix and check again; continue only when it
+passes. "Double-check your work" is not a check.
+-->
+[Validation: run `scripts/[check]` / compare against [reference] → fix → re-run
+until it passes.]
+
+<!--
+SCRIPTS (delete if none): say whether to RUN or READ each one, and put the
+install line next to its first use:
+  Install once: `pip install pypdf`
+  Run: `python3 scripts/fill_form.py input.pdf` (prints JSON; exit 1 = bad input)
+Stdlib-only scripts need no install line — say "no install needed".
+MCP tools are named in full: `ServerName:tool_name`.
+-->
 
 ## Gotchas
 
@@ -55,7 +104,8 @@ Match the specificity of your writing to how much the agent should adapt.
 MANDATORY. Scaffolded at birth — never delete this section. This is where the
 skill's hard-won knowledge accumulates: the non-obvious failure modes, the API
 that lies about its rate limit, the input format that looks fine but breaks.
-Every anneal adds a line here. Start with one placeholder until you hit the
+Every anneal adds a line here — narrow to the failure it came from, never a
+universal rule from one example. Start with one placeholder until you hit the
 first real one.
 -->
 - [Known trap and how to avoid it — replace this line with the first real gotcha.]

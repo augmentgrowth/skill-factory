@@ -67,7 +67,9 @@ Judge it by imagining five requests that should trigger and three near-misses th
 **A4 Frontmatter is portable.** Claude Code and Codex ignore unknown keys, but claude.ai upload,
 the Skills API, Anthropic's `package_skill` and OpenAI's `quick_validate` *reject* any key outside
 `name`, `description`, `license`, `compatibility`, `metadata`, `allowed-tools`. Fix: move custom
-flags under `metadata` as strings (`metadata:` then `  static: "true"`). Claude Code's own keys
+flags under `metadata` as strings (`metadata:` then `  owner: "growth"`). Exception: the factory's
+own keys (`static`, `tier`, `upstream`, `public_safe`) stay top level, because the factory's tools
+read and rewrite them there; strip or move them only in a copy made for upload. Claude Code's own keys
 (`when_to_use`, `disable-model-invocation`, `context`, `allowed-tools`…) are fine for a skill that
 only runs in Claude Code — n.a. unless the builder uploads it elsewhere. Never use `model:` to
 document a target model: in Claude Code it *switches* the model for the turn.
@@ -138,6 +140,7 @@ a fix to remove: current Opus models already self-verify and over-verify when to
 
 **G1 Target models recorded.** `metadata` carries `target-models: "<model ids>"` naming the models
 the skill was written and tested for, so a later reader knows which model's habits it assumes.
+Revisit it when a new model generation ships: the value is a claim about testing, not a setting.
 
 **G2 No shouting.** All-caps `MUST` / `NEVER` / `ALWAYS` / `CRITICAL` scattered through the text was a fix
 for older models' under-triggering; current models over-apply it. Fix: plain imperative plus the
@@ -196,9 +199,8 @@ now (the audit can draft it; the builder confirms it).
 
 **L1 Factory-built skills keep the factory's records.** n.a. for skills the factory did not build.
 `CHANGELOG.md` present (a deliberate factory exception to "no README/CHANGELOG in a skill folder" —
-it keeps history out of SKILL.md); `cases/baseline/` present; a frozen skill marks it with
-`metadata` → `static: "true"` (legacy top-level `static: true` is still honoured) and carries no
-Improvement protocol block; credential-using skills ship `.env.example` and never `.env`.
+it keeps history out of SKILL.md); `cases/baseline/` present; a frozen skill marks it with top-level
+`static: true` and carries no Improvement protocol block; credential-using skills ship `.env.example` and never `.env`.
 
 ## Sources and refreshing this rubric
 

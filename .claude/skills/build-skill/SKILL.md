@@ -1,6 +1,7 @@
 ---
 name: build-skill
-description: Guided flow to turn a recurring workflow into a top-tier, git-tracked
+description: >-
+  Guided flow to turn a recurring workflow into a top-tier, git-tracked
   Claude skill. Use when someone wants to build, make, or create a skill; "turn my
   weekly workflow into a skill", "capture how I do X", "I want a skill for…",
   "automate my recurring task", or describes a repeating task they want on rails.
@@ -88,10 +89,23 @@ Decide the split now, before you write a line.
 
 ## Step 4 — Draft
 
-Draft from `templates/TEMPLATE_Skill.md` against the quality bar
-(`references/quality-bar.md`). Match specificity to fragility: prose where the agent
-should think, exact text or `scripts/` where the operation is fragile. Scaffold the
-`## Gotchas` section at birth, even if it starts with one placeholder line.
+Draft from `templates/TEMPLATE_Skill.md` against the factory rubric
+([../audit-skill/references/rubric.md](../audit-skill/references/rubric.md)) and the
+quality bar ([references/quality-bar.md](references/quality-bar.md)). `templates/` lives at
+the factory's root — in a clone that is the repo root; under a plugin install it is
+`${CLAUDE_PLUGIN_ROOT}/templates/`. Three rubric rules shape the draft most:
+
+- **Strictness matches fragility.** For each step ask what happens if Claude does it
+  differently: nothing much → prose with the reason; consequential (money, deleting,
+  sending, irreversible) → an exact command or a `scripts/` file.
+- **Ordered jobs get a checklist** Claude copies and ticks off, with a "go back to step N"
+  line wherever a check can fail; **quality-critical output gets a concrete check** (a
+  script, rubric, or reference) to fix against and re-run.
+- **Write for current models:** plain imperatives with the reason, no all-caps MUST/NEVER,
+  no over-explaining, no "write out your reasoning", key rules near the top. Record the
+  models you test on in `metadata` → `target-models`.
+
+Scaffold the `## Gotchas` section at birth, even if it starts with one placeholder line.
 
 **Credentials are lazy (only if the skill actually needs them):** scaffold a committed
 `.env.example` documenting every variable in the skill folder, then set keys up with the
@@ -100,9 +114,14 @@ or logging any value**. Never commit, print, or repeat a secret. The `.env` is g
 
 ## Step 5 — Self-critique
 
-Run the five checks in `references/self-critique.md` (Voice / Principles / Anti-Pattern
-/ Example / Focus) and fix what fails **before showing the builder the draft**. Present
-an honest assessment: what improved, what is still weak, what you need answered.
+First run the lint — `python3 ../audit-skill/scripts/lint_skills.py <skill-folder>`
+(stdlib only, no install; the path is relative to this skill's folder) — and resolve
+every `fix` finding before anything else; it catches the mechanical misses (limits,
+nesting, missing Contents lists, undeclared dependencies) so your own pass can spend
+its attention on judgment. Then run the six checks in `references/self-critique.md`
+(Voice / Principles / Anti-Pattern / Example / Model Calibration / Focus) and fix what
+fails **before showing the builder the draft**. Present an honest assessment: what
+improved, what is still weak, what you need answered.
 
 **Script efficiency pass (script-backed drafts only).** If the draft added or changed
 anything in `scripts/`, dispatch a **fresh sub-agent** to run the sibling

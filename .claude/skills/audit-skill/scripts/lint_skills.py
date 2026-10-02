@@ -182,15 +182,44 @@ def strip_inline_code(text: str) -> str:
     return re.sub(r"`[^`]*`", "", text)
 
 
-def split_frontmatter(lines: list[str]) -> tuple[dict[str, str], int, str | None]:
+YAML_INDICATORS = tuple("[]{}&*!|>%@`")
+
+
+def yaml_hazards(fields: dict[str, str], plain: dict[str, int]) -> list[tuple[int, str]]:
+    """Plain (unquoted, non-block) values that a real YAML parser rejects or misreads.
+
+    This reader is lenient on purpose, but Claude Code is not: a frontmatter block that
+    fails to parse loads with every field silently dropped, so the skill keeps its name
+    and loses its description -- it stops triggering. `Triggers on: x` inside a plain
+    value is the classic cause.
+    """
+    out = []
+    for key, line in plain.items():
+        text = fields.get(key, "")
+        if re.search(r":(\s|$)", text):
+            out.append((line, f"{key}: unquoted value contains ': ' — YAML rejects the whole frontmatter "
+                              "and the skill loads with no description; use a `>-` block or quote it"))
+        elif text.startswith(YAML_INDICATORS):
+            out.append((line, f"{key}: unquoted value starts with {text[0]!r}, which YAML reads as syntax; "
+                              "use a `>-` block or quote it"))
+        elif re.search(r"\s#", text):
+            out.append((line, f"{key}: ' #' starts a YAML comment, so the rest of the value is cut; "
+                              "use a `>-` block or quote it"))
+    return out
+
+
+def split_frontmatter(lines: list[str], plain: dict[str, int] | None = None
+                      ) -> tuple[dict[str, str], int, str | None]:
     """Flat key: value reader, plus one nested level under `metadata:`.
 
     Returns (fields, body_start_index, error). Folded/indented continuation lines are
     joined onto their key; `metadata` sub-keys land in fields as "metadata.<key>".
+    If `plain` is given, it is filled with {key: line} for unquoted, non-block values.
     """
     if not lines or lines[0].strip() != "---":
         return {}, 0, "SKILL.md does not open with a --- frontmatter line"
     fields: dict[str, str] = {}
+    plain = {} if plain is None else plain
     key = None
     for i, line in enumerate(lines[1:], start=1):
         if line.strip() == "---":
@@ -210,7 +239,9 @@ def split_frontmatter(lines: list[str]) -> tuple[dict[str, str], int, str | None
             return fields, 0, f"frontmatter line {i + 1} is not key: value"
         key = k.strip()
         v = v.strip()
-        fields[key] = "" if v in (">", ">-", "|", "|-") else v.strip("'\"")
+        if v and v not in (">", ">-", "|", "|-", ">+", "|+") and v[0] not in "'\"":
+            plain[key] = i + 1
+        fields[key] = "" if v in (">", ">-", "|", "|-", ">+", "|+") else v.strip("'\"")
     return fields, 0, "frontmatter is never closed by a --- line"
 
 
@@ -224,11 +255,14 @@ def slug(text: str) -> str:
 
 
 def check_frontmatter(rep: SkillReport, skill_md: Path, lines: list[str], folder: str) -> int:
-    fields, body_start, err = split_frontmatter(lines)
+    plain: dict[str, int] = {}
+    fields, body_start, err = split_frontmatter(lines, plain)
     rep.facts["frontmatter_keys"] = sorted(fields)
     if err:
         rep.add("A1", "fix", skill_md, 1, err)
         return body_start
+    for line, message in yaml_hazards(fields, plain):
+        rep.add("A1", "fix", skill_md, line, message)
     name, desc = fields.get("name", ""), fields.get("description", "")
     if not name:
         rep.add("A1", "fix", skill_md, 1, "frontmatter has no name")

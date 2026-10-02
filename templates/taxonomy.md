@@ -31,6 +31,11 @@ Emphasize:
   These belong in `## Gotchas` and grow with every anneal.
 - **Error handling at system boundaries.** What to do when the call fails,
   returns partial data, or times out — retry vs. abort vs. escalate.
+- **Install line next to use.** Every third-party package gets its install
+  command beside the step that first needs it; never assume it is installed.
+- **A concrete validator.** When output must be right (a filled form, a
+  config, a data transform), ship a check script and loop: run → fix → re-run
+  until it passes.
 
 Leave out: general explanation of what the tool is. Claude can read a happy-
 path doc; the skill's value is the sharp edges.
@@ -64,7 +69,9 @@ Emphasize:
   players. If you find yourself pasting another skill's logic in, stop — that
   logic should be its own skill you call.
 - **The sequence and its gates.** What must be true to move from one step to
-  the next; where to stop and flag for review.
+  the next; where to stop and flag for review. Give Claude a checklist it
+  copies into its response and ticks off, with a "go back to step N" line at
+  every gate that can fail.
 - **Handoffs.** What each step hands the next, in what shape.
 
 Leave out: the internals of the steps themselves. Those live in the atomic

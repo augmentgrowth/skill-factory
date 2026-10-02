@@ -94,6 +94,19 @@ class LintTest(unittest.TestCase):
         body = GOOD.format(name="weekly-update").replace("Turns a weekly", "I can turn a weekly")
         self.assertIn("A3", self.rules(self.skill(body=body), "fix"))
 
+    def test_colon_in_plain_description_breaks_yaml(self):
+        body = ("---\nname: weekly-update\ndescription: Turns exports into updates. Use when\n"
+                "  writing the update. Triggers on: weekly update, exec update.\n---\n\n## Gotchas\n")
+        rep = lint_skills.lint(self.skill(body=body, refs={}))
+        self.assertTrue(any(f.rule == "A1" and f.level == "fix" and "YAML" in f.message
+                            for f in rep.findings))
+
+    def test_colon_inside_block_or_quotes_is_fine(self):
+        for desc in ('>-\n  Turns exports. Use when: weekly.', '"Turns exports. Use when: weekly."'):
+            body = f"---\nname: weekly-update\ndescription: {desc}\n---\n\n## Gotchas\n"
+            rep = lint_skills.lint(self.skill(body=body, refs={}))
+            self.assertFalse(any("YAML" in f.message for f in rep.findings), desc)
+
     def test_folded_description_is_read(self):
         body = ("---\nname: weekly-update\ndescription: >-\n  Turns exports into updates. Use when\n"
                 "  writing the weekly update.\n---\n\n## Gotchas\n")
