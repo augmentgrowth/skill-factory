@@ -40,8 +40,8 @@ Audit progress:
 Default scope is every skill in the current repo: folders holding a `SKILL.md` under
 `.claude/skills/`, `.agents/skills/`, or `skills/`. If the lint reports other `SKILL.md` folders
 it did not scan (plugin layouts, demos), tell the builder and offer to include them. If the builder
-names one skill or a folder, audit only that. Follow links: a skill folder that is a symlink is audited at its real location, and that
-is where any fix will be saved.
+names one skill or a folder, audit only that. Follow links: a skill folder that is a symlink is
+audited at its real location, and that is where any fix will be saved.
 
 Note each skill's tier: one under `vendor/` or whose frontmatter says `tier: external` is someone
 else's skill — report on it, never edit it.

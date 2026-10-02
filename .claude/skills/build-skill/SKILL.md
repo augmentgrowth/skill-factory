@@ -131,9 +131,9 @@ or logging any value**. Never commit, print, or repeat a secret. The `.env` is g
 First run the lint —
 `python3 "${CLAUDE_SKILL_DIR}/../audit-skill/scripts/lint_skills.py" <skill-folder>` (stdlib
 only, no install; `${CLAUDE_SKILL_DIR}` is this skill's folder — on harnesses that don't
-substitute it, use that folder's path) — and resolve every `fix` finding before anything else; it catches the mechanical misses (limits,
-nesting, missing Contents lists, undeclared dependencies) so your own pass can spend
-its attention on judgment. Then run the six checks in `references/self-critique.md`
+substitute it, use that folder's path) — and resolve every `fix` finding before anything
+else; it catches the mechanical misses (limits, nesting, missing Contents lists, undeclared
+dependencies) so your own pass can spend its attention on judgment. Then run the six checks in `references/self-critique.md`
 (Voice / Principles / Anti-Pattern / Example / Model Calibration / Focus) and fix what
 fails **before showing the builder the draft**. Present an honest assessment: what
 improved, what is still weak, what you need answered.
