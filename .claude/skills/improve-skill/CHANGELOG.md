@@ -15,3 +15,4 @@ One line per change, newest last. Format: `[YYYY-MM-DD] What changed and why`.
 - [2026-10-02] Lock protocol, queue draining and static-proposal placement moved verbatim into references/ (linked from where each is needed) so the anneal steps fit the ~5k tokens that survive a long session; all three saved cases re-judged green against the moved text.
 - [2026-10-02] Step 6 runs the factory lint on the patched skill before the green commit; a fix that adds a new fix-level finding (e.g. YAML the loader rejects) is not green.
 - [2026-10-02] Step 6 lint path carries the no-substitution fallback and compares against a lint run made before the first attempt.
+- [2026-10-02] Step 5 opens with the before-fix lint run that Step 6 compares against; a lint-driven correction counts as an attempt, keeping the loop bounded at 3.

@@ -149,7 +149,8 @@ release it at every exit.
 
 ## Step 5 — Fix → replay loop (max 3 attempts)
 
-Repeat up to 3 times:
+Before attempt 1, run the factory lint (the command in Step 6) on `<skill-folder>` and keep the
+output — Step 6 compares against it. Then repeat up to 3 times:
 
 1. Fix the immediate problem — the script, a `SKILL.md` instruction, or a reference file. **Fix
    only what the case exercises**; an unrelated defect you notice gets its own case and its own
@@ -171,9 +172,9 @@ this commit.
 Then run the factory lint on the patched skill
 (`python3 "${CLAUDE_SKILL_DIR}/../audit-skill/scripts/lint_skills.py" <skill-folder>`; stdlib
 only; `${CLAUDE_SKILL_DIR}` is this skill's folder — where it isn't substituted, use the folder
-this SKILL.md lives in) and compare with the run you made before the first attempt (run it once
-then, at the start of Step 5). A fix that adds a new `fix` finding — most often a frontmatter edit YAML now rejects, which
-silently stops the skill loading — is not green: correct it and replay again.
+this SKILL.md lives in) and compare with the run you kept at the start of Step 5. A fix that adds a new `fix` finding — most often a frontmatter edit YAML now rejects, which
+silently stops the skill loading — is not green: correct it and replay again; that correction
+counts as the next attempt toward the limit of 3.
 
 Stage the skill folder **by explicit path** (`git -C <repo> add <skill-folder>`) and make a single
 commit scoped to it (`git -C <repo> commit -m "<message>" -- <skill-folder>`) containing all four:
