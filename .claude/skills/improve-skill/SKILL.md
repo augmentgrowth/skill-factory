@@ -80,7 +80,8 @@ Where the proposal and case live depends on the tier:
   - **When the repo publishes, redirect the save — do not skip it.** A proposal quotes real paths
     and machine detail, so it must never land in a repo that publishes (a public remote, or an
     auto-sync cron). Write it to the private hub's (a personal skill-home repo; see
-    `templates/skill-home/README.md`) proposal queue instead, at the same
+    the factory's `templates/skill-home/README.md` — under a plugin install, at
+    `${CLAUDE_PLUGIN_ROOT}/templates/skill-home/README.md`) proposal queue instead, at the same
     `docs/proposals/<YYYY-MM-DD>-<skill>-<slug>.md` path, and tell the builder in plain language
     where it went. Leaving it unsaved was the old remedy and it was wrong: the proposal is the only
     failure record a static skill ever gets, and a loose file is one cleanup away from gone.
