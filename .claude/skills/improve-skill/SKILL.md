@@ -168,6 +168,11 @@ fixes that the failing case exercises, then replay once more to confirm green. A
 what this case exercises gets noted for its own case and its own anneal — never a ride-along in
 this commit.
 
+Then run the factory lint on the patched skill
+(`python3 "${CLAUDE_SKILL_DIR}/../audit-skill/scripts/lint_skills.py" <skill-folder>`; stdlib
+only). A fix that adds a new `fix` finding — most often a frontmatter edit YAML now rejects, which
+silently stops the skill loading — is not green: correct it and replay again.
+
 Stage the skill folder **by explicit path** (`git -C <repo> add <skill-folder>`) and make a single
 commit scoped to it (`git -C <repo> commit -m "<message>" -- <skill-folder>`) containing all four:
 
