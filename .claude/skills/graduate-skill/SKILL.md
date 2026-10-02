@@ -22,7 +22,7 @@ Graduation progress:
 - [ ] 1. Pre-graduation checks pass — if not, back to the builder
 - [ ] 2. No CRITICAL efficiency finding — if one, fix it and repeat step 2
 - [ ] 3. Eval gate offered
-- [ ] 4. Copied to the personal skills directory without .env
+- [ ] 4. Copied to the personal skills directory without .env or config.json
 - [ ] 5. Tagged, published, output receipt handed over
 ```
 
@@ -95,8 +95,9 @@ steps. In that case do exactly this handoff and stop; no guided-flow ceremony, n
 Copy the whole skill folder to the personal skills directory named in the spec's **Harness notes**
 matrix for the active harness (Claude Code: `~/.claude/skills/<name>/`; cite the matrix rather than
 hardcoding for any other harness):
-`rsync -a --delete --exclude '.env' <skill-folder>/ ~/.claude/skills/<name>/` (`--delete` clears
-files from an earlier graduation; the excluded `.env` is kept).
+`rsync -a --delete --exclude '.env' --exclude 'config.json' <skill-folder>/ ~/.claude/skills/<name>/`
+(`--delete` clears files from an earlier graduation; the excluded `.env` and `config.json` — the
+builder's own secrets and settings — are kept).
 
 **The copy includes:** `cases/`, `CHANGELOG.md`, the `## Gotchas` section, `.env.example`, and the
 Improvement protocol block — **unless the skill's frontmatter is `static: true`**, in which case that

@@ -11,3 +11,4 @@ One line per change, newest last. Format: `[YYYY-MM-DD] What changed and why`.
 - [2026-10-02] Evaluator round 1: graduation blocks on rubric P1 failures only (lint `fix` findings on P2/P3 rules are reported, the builder decides); lint path resolves from the skill's own folder.
 - [2026-10-02] Saved baseline case (input + judging rubric) so later changes to this skill can be replayed and proven safe.
 - [2026-10-02] Baseline case states how the skill treats API responses, so rubric D2 can be judged.
+- [2026-10-02] Re-graduation keeps the installed copy's config.json as well as .env (rsync excludes both).
