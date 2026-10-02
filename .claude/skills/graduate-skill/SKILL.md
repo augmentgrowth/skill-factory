@@ -36,11 +36,15 @@ Confirm the skill is actually done before moving it:
    `githooks`. Never `--global`; a different existing value belongs to another hook manager —
    escalate rather than clobber. Silent. Full rule: the spec's "Install the hook yourself, in
    preflight."
-1. **Quality bar.** Run the lint (`python3 ../audit-skill/scripts/lint_skills.py <skill-folder>`,
-   stdlib only; paths are relative to this skill's folder) and judge the skill against the factory
-   rubric (`../audit-skill/references/rubric.md`) and `../build-skill/references/quality-bar.md`. Any
-   `fix` finding or failed P1 rule — send it back to the builder, do not graduate. P2/P3 findings
-   are reported and the builder decides.
+1. **Quality bar.** Run the lint
+   (`python3 "${CLAUDE_SKILL_DIR}/../audit-skill/scripts/lint_skills.py" <skill-folder>`, stdlib
+   only; `${CLAUDE_SKILL_DIR}` is this skill's folder — on harnesses that don't substitute it, use
+   that folder's path) and judge the skill against the factory rubric
+   (`../audit-skill/references/rubric.md`) and `../build-skill/references/quality-bar.md`, both
+   relative to this skill's folder. Any failure the rubric ranks P1 (the skill can't load or
+   trigger, or takes a consequential action without an exact command) — send it back to the
+   builder, do not graduate. P2/P3 findings, lint `fix` findings included, are reported and the
+   builder decides.
 2. **Test coverage.** `cases/baseline/` exists with a captured baseline the skilled output beats.
 3. **History hygiene.** `CHANGELOG.md` present with at least line one; `## Gotchas` present.
 
