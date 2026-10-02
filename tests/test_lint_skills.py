@@ -74,7 +74,7 @@ class LintTest(unittest.TestCase):
         d = self.skill(name="Weekly_Update")
         self.assertIn("A1", self.rules(d, "fix"))
         d = self.skill(name="claude-helper")
-        self.assertIn("A1", self.rules(d, "fix"))
+        self.assertIn("A1", self.rules(d, "check"))  # only claude.ai/API reject it
 
     def test_name_must_match_folder(self):
         d = self.skill(body=GOOD.format(name="other-name"))
@@ -102,9 +102,16 @@ class LintTest(unittest.TestCase):
         self.assertGreater(rep.facts["description_chars"], 20)
 
     def test_unknown_top_level_key_is_flagged(self):
-        body = GOOD.format(name="weekly-update").replace("---\n\n#", "static: true\n---\n\n#", 1)
+        body = GOOD.format(name="weekly-update").replace("---\n\n#", "owner: sam\n---\n\n#", 1)
         rep = lint_skills.lint(self.skill(body=body))
-        self.assertTrue(any(f.rule == "A4" and "static" in f.message for f in rep.findings))
+        self.assertTrue(any(f.rule == "A4" and "owner" in f.message for f in rep.findings))
+
+    def test_factory_keys_are_facts_not_findings(self):
+        body = GOOD.format(name="weekly-update").replace(
+            "---\n\n#", "static: true\npublic_safe: true\n---\n\n#", 1)
+        rep = lint_skills.lint(self.skill(body=body))
+        self.assertNotIn("A4", {f.rule for f in rep.findings})
+        self.assertEqual(rep.facts["factory_keys"], ["public_safe", "static"])
 
     def test_claude_code_keys_are_facts_not_findings(self):
         body = GOOD.format(name="weekly-update").replace("---\n\n#", "context: fork\n---\n\n#", 1)
@@ -171,6 +178,14 @@ class LintTest(unittest.TestCase):
         body = GOOD.format(name="weekly-update") + "\nSee [gone](references/gone.md).\n"
         self.assertIn("C6", self.rules(self.skill(body=body)))
 
+    def test_repo_path_is_reported_as_not_travelling(self):
+        (self.root / ".git").mkdir()
+        write(self.root / "templates/base.md", "# Base\n")
+        body = GOOD.format(name="weekly-update") + "\nStart from `templates/base.md`.\n"
+        rep = lint_skills.lint(self.skill(body=body))
+        msgs = [f.message for f in rep.findings if f.rule == "C6"]
+        self.assertTrue(msgs and "outside the skill folder" in msgs[0])
+
     def test_bare_repo_filename_is_not_a_broken_link(self):
         body = GOOD.format(name="weekly-update") + "\nRead `CLAUDE.md` for the contract.\n"
         self.assertNotIn("C6", self.rules(self.skill(body=body)))
@@ -195,7 +210,7 @@ class LintTest(unittest.TestCase):
 
     def test_missing_gotchas(self):
         body = GOOD.format(name="weekly-update").split("## Gotchas")[0]
-        self.assertIn("J1", self.rules(self.skill(body=body), "fix"))
+        self.assertIn("J1", self.rules(self.skill(body=body), "check"))
 
     # --- scripts -------------------------------------------------------------
 
@@ -217,6 +232,35 @@ class LintTest(unittest.TestCase):
                                         "scripts/helper.py": "x = 1\n"})
         self.assertNotIn("H1", self.rules(d))
 
+    def test_optional_and_docstring_imports_are_not_dependencies(self):
+        body = GOOD.format(name="weekly-update") + "\nRun `python scripts/pull.py`.\n"
+        script = ('"""Pull data.\n\nimport requests is not needed here.\n"""\n'
+                  "import json\ntry:\n    import yaml\nexcept ImportError:\n    yaml = None\n")
+        d = self.skill(body=body, refs={"references/format.md": "# F\n", "scripts/pull.py": script})
+        self.assertNotIn("H1", self.rules(d))
+
+    def test_requirements_file_declares_dependencies(self):
+        body = GOOD.format(name="weekly-update") + "\nRun `python scripts/pull.py`.\n"
+        d = self.skill(body=body, refs={"references/format.md": "# F\n",
+                                        "scripts/pull.py": "import requests\n",
+                                        "requirements.txt": "requests==2.32.0\n"})
+        self.assertNotIn("H1", self.rules(d))
+
+    def test_pep723_block_declares_dependencies(self):
+        body = GOOD.format(name="weekly-update") + "\nRun `uv run scripts/pull.py`.\n"
+        script = '# /// script\n# dependencies = ["requests"]\n# ///\nimport requests\n'
+        d = self.skill(body=body, refs={"references/format.md": "# F\n", "scripts/pull.py": script})
+        self.assertNotIn("H1", self.rules(d))
+
+    def test_install_line_for_a_different_package_is_a_check(self):
+        body = GOOD.format(name="weekly-update") + "\nRun `pip install pandas`, then `python scripts/pull.py`.\n"
+        d = self.skill(body=body, refs={"references/format.md": "# F\n",
+                                        "scripts/pull.py": "import pandas\nimport requests\n"})
+        rep = lint_skills.lint(d)
+        h1 = [f for f in rep.findings if f.rule == "H1"]
+        self.assertEqual([(f.level, "requests" in f.message, "pandas" in f.message) for f in h1],
+                         [("check", True, False)])
+
     def test_unmentioned_script(self):
         d = self.skill(refs={"references/format.md": "# F\n", "scripts/ghost.sh": "echo hi\n"})
         self.assertIn("H2", self.rules(d))
@@ -228,6 +272,12 @@ class LintTest(unittest.TestCase):
         write(self.root / "repo/.claude/skills/two/SKILL.md", GOOD.format(name="two"))
         names = sorted(p.name for p in lint_skills.discover([str(self.root / "repo")]))
         self.assertEqual(names, ["one", "two"])
+
+    def test_discovers_nested_plugin_layout(self):
+        write(self.root / "repo/plugins/ads/skills/report/SKILL.md", GOOD.format(name="report"))
+        write(self.root / "repo/plugins/ads/skills/report/cases/x/SKILL.md", GOOD.format(name="x"))
+        names = [p.name for p in lint_skills.discover([str(self.root / "repo")])]
+        self.assertEqual(names, ["report"])
 
     def test_cli_exits_zero_with_findings(self):
         d = self.skill(name="Bad_Name")

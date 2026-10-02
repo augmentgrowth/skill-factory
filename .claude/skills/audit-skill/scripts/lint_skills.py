@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """lint_skills — the mechanical half of a skill audit.
 
-Stdlib only (Python 3.10+), so it runs in any repo with no install step:
+Stdlib only (Python 3.9+), so it runs in any repo with no install step:
 
     python3 <this-skill>/scripts/lint_skills.py <path> [<path> ...] [--json]
 
@@ -48,7 +48,6 @@ TIME_BOMB_RE = re.compile(
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.*?)\s*#*\s*$")
 CONTENTS_RE = re.compile(r"^(#{1,6}\s*)?(\*\*)?(table of contents|contents|toc)(\*\*)?:?\s*$", re.IGNORECASE)
 INSTALL_RE = re.compile(r"\b(pip3?|uv pip|uv add|poetry add|pipx|npm|pnpm|yarn|bun|brew|apt(-get)?)\s+(install|add|i)\b|requirements\.txt|package\.json|pyproject\.toml")
-PY_IMPORT_RE = re.compile(r"^\s*(?:import\s+([\w.]+)|from\s+([\w.]+)\s+import)", re.MULTILINE)
 JS_IMPORT_RE = re.compile(r"""(?:require\(\s*['"]([^'"./][^'"]*)['"]\s*\)|from\s+['"]([^'"./][^'"]*)['"])""")
 NODE_BUILTINS = {"fs", "path", "os", "child_process", "url", "util", "crypto", "http", "https",
                  "stream", "events", "readline", "process", "assert", "zlib", "buffer", "net"}
@@ -59,6 +58,23 @@ CLAUDE_CODE_KEYS = {"when_to_use", "argument-hint", "arguments", "disable-model-
                     "user-invocable", "disallowed-tools", "model", "effort", "context", "agent",
                     "background", "hooks", "paths", "shell"}
 TARGET_MODEL_KEYS = ("target-models", "target_models")
+# Keys this factory (and its skill-home template) reads at top level. Kept there on purpose:
+# `bin/skills vendor update` rewrites them in place. Reported as facts, with the upload caveat.
+FACTORY_KEYS = {"static", "tier", "upstream", "public_safe"}
+# sys.stdlib_module_names arrived in 3.10; macOS still ships 3.9. A fallback list that is
+# merely incomplete only costs a spurious H1 finding, never a crash.
+STDLIB = set(getattr(sys, "stdlib_module_names", ())) or {
+    "abc", "argparse", "array", "ast", "asyncio", "base64", "bisect", "calendar", "collections",
+    "concurrent", "contextlib", "copy", "csv", "ctypes", "dataclasses", "datetime", "decimal",
+    "difflib", "email", "enum", "errno", "fnmatch", "fractions", "functools", "gc", "getpass",
+    "glob", "gzip", "hashlib", "heapq", "hmac", "html", "http", "importlib", "inspect", "io",
+    "ipaddress", "itertools", "json", "logging", "math", "mimetypes", "multiprocessing", "operator",
+    "os", "pathlib", "pickle", "platform", "pprint", "queue", "random", "re", "secrets", "select",
+    "shlex", "shutil", "signal", "socket", "sqlite3", "ssl", "stat", "statistics", "string",
+    "struct", "subprocess", "sys", "tarfile", "tempfile", "textwrap", "threading", "time",
+    "timeit", "tomllib", "traceback", "types", "typing", "unicodedata", "unittest", "urllib",
+    "uuid", "warnings", "weakref", "xml", "zipfile", "zlib", "zoneinfo"}
+MAX_DISCOVERY_DEPTH = 6
 SKIP_DIRS = {"cases", "evals", ".git", "node_modules", "__pycache__", ".venv", "venv"}
 NON_REFERENCE_FILES = {"SKILL.md", "CHANGELOG.md", "README.md", "LICENSE.md", "LICENSE.txt"}
 
@@ -98,10 +114,13 @@ def discover(paths: list[str]) -> list[Path]:
             continue
         roots = [p / ".claude" / "skills", p / ".agents" / "skills", p / "skills"]
         roots = [r for r in roots if r.is_dir()] or [p]
+        before = len(found)
         for root in roots:
             for child in sorted(root.iterdir()):
                 if child.is_dir() and (child / "SKILL.md").is_file():
                     found.append(child)
+        if len(found) == before:
+            found.extend(walk_for_skills(p))
     seen, unique = set(), []
     for f in found:
         key = f.resolve()
@@ -109,6 +128,35 @@ def discover(paths: list[str]) -> list[Path]:
             seen.add(key)
             unique.append(f)
     return unique
+
+
+def walk_for_skills(root: Path) -> list[Path]:
+    """Bounded search for nested layouts (plugins/*/skills/*, category folders)."""
+    hits: list[Path] = []
+    stack = [(root, 0)]
+    while stack:
+        here, depth = stack.pop()
+        try:
+            children = sorted(here.iterdir())
+        except OSError:
+            continue
+        for child in children:
+            if not child.is_dir() or child.name in SKIP_DIRS:
+                continue
+            if child.name.startswith(".") and child.name not in (".claude", ".agents"):
+                continue
+            if (child / "SKILL.md").is_file():
+                hits.append(child)
+            elif depth + 1 < MAX_DISCOVERY_DEPTH:
+                stack.append((child, depth + 1))
+    return sorted(hits)
+
+
+def repo_root(path: Path) -> Path | None:
+    for cand in [path.resolve(), *path.resolve().parents]:
+        if (cand / ".git").exists():
+            return cand
+    return None
 
 
 # --- text helpers -----------------------------------------------------------
@@ -190,7 +238,8 @@ def check_frontmatter(rep: SkillReport, skill_md: Path, lines: list[str], folder
         if not NAME_RE.match(name):
             rep.add("A1", "fix", skill_md, 2, f"name {name!r} must be lowercase letters, digits, single hyphens")
         if any(w in name for w in RESERVED_NAME_WORDS):
-            rep.add("A1", "fix", skill_md, 2, f"name {name!r} contains a reserved word (anthropic/claude)")
+            rep.add("A1", "check", skill_md, 2, f"name {name!r} contains a reserved word (anthropic/claude); "
+                    "claude.ai upload and the Skills API reject it, Claude Code does not")
         if name != folder:
             rep.add("A1", "fix", skill_md, 2, f"name {name!r} does not match its folder {folder!r}")
     if not desc:
@@ -206,8 +255,9 @@ def check_frontmatter(rep: SkillReport, skill_md: Path, lines: list[str], folder
     if not re.search(r"\b(use (it |this )?(when|for|whenever)|triggers? on|fires (on|when)|when (the user|someone|a user|you))", desc, re.IGNORECASE):
         rep.add("A3", "check", skill_md, 1, "description has no explicit when-to-use clause ('Use when…')")
     top = {k for k in fields if not k.startswith("metadata.")}
-    unknown = sorted(top - SPEC_KEYS - CLAUDE_CODE_KEYS)
+    unknown = sorted(top - SPEC_KEYS - CLAUDE_CODE_KEYS - FACTORY_KEYS)
     rep.facts["claude_code_only_keys"] = sorted(top & CLAUDE_CODE_KEYS)
+    rep.facts["factory_keys"] = sorted(top & FACTORY_KEYS)
     for k in unknown:
         rep.add("A4", "check", skill_md, frontmatter_line(lines, k),
                 f"frontmatter key {k!r} is outside the spec: ignored by Claude Code and Codex, rejected by "
@@ -269,11 +319,17 @@ def resolve_target(skill_dir: Path, from_file: Path, target: str) -> Path | None
 
 def check_references(rep: SkillReport, skill_dir: Path, skill_md: Path, lines: list[str]) -> None:
     linked_from_skill: set[Path] = set()
+    root = repo_root(skill_dir)
     for n, target, is_claim in local_links(skill_md, lines):
         hit = resolve_target(skill_dir, skill_md, target)
         if hit is None:
-            if is_claim and "<" not in target and "*" not in target:
-                rep.add("C6", "check", skill_md, n, f"link target {target!r} not found from the skill folder")
+            if not is_claim or "<" in target or "*" in target:
+                continue
+            if root is not None and (root / target).exists():
+                rep.add("C6", "check", skill_md, n, f"{target!r} lives outside the skill folder (a repo path); "
+                        "it will not travel when the skill is installed elsewhere")
+            else:
+                rep.add("C6", "check", skill_md, n, f"link target {target!r} not found")
             continue
         linked_from_skill.add(hit)
 
@@ -350,7 +406,39 @@ def check_language(rep: SkillReport, skill_dir: Path) -> None:
 
 def check_gotchas(rep: SkillReport, skill_md: Path, lines: list[str]) -> None:
     if not any(re.match(r"^#{2,3}\s+(gotchas|common pitfalls|pitfalls)\b", l, re.IGNORECASE) for _, l in prose_lines(lines)):
-        rep.add("J1", "fix", skill_md, len(lines), "no ## Gotchas section")
+        rep.add("J1", "check", skill_md, len(lines), "no ## Gotchas section")
+
+
+DOCSTRING_RE = re.compile(r'("""|\'\'\')(?:.|\n)*?\1')
+PEP723_RE = re.compile(r"^# /// script\s*$", re.MULTILINE)
+TOP_IMPORT_RE = re.compile(r"(?:import\s+([\w.]+(?:\s*,\s*[\w.]+)*)|from\s+([\w.]+)\s+import)\b")
+
+
+def required_imports(text: str, suffix: str, local: set[str]) -> set[str]:
+    """Third-party modules a script cannot run without.
+
+    Only top-level imports count: an indented import sits in a try/except or a
+    function and is optional by construction. Docstrings are stripped first so
+    prose that mentions importing never reads as code.
+    """
+    mods: set[str] = set()
+    if suffix == ".py":
+        for line in DOCSTRING_RE.sub("", text).splitlines():
+            m = TOP_IMPORT_RE.match(line)
+            if not m:
+                continue
+            names = m.group(1).split(",") if m.group(1) else [m.group(2)]
+            for name in names:
+                mod = name.strip().split(".")[0]
+                if mod and mod not in STDLIB and mod not in local and mod != "__future__":
+                    mods.add(mod)
+    elif suffix in (".js", ".mjs", ".ts"):
+        for m in JS_IMPORT_RE.finditer(text):
+            mod = (m.group(1) or m.group(2) or "").replace("node:", "")
+            mod = "/".join(mod.split("/")[:2]) if mod.startswith("@") else mod.split("/")[0]
+            if mod and mod not in NODE_BUILTINS:
+                mods.add(mod)
+    return mods
 
 
 def check_scripts(rep: SkillReport, skill_dir: Path, skill_text: str) -> None:
@@ -358,8 +446,12 @@ def check_scripts(rep: SkillReport, skill_dir: Path, skill_text: str) -> None:
                if p.is_file() and p.suffix in (".py", ".js", ".mjs", ".ts", ".sh")
                and not (set(p.relative_to(skill_dir).parts[:-1]) & SKIP_DIRS)]
     rep.facts["scripts"] = [p.relative_to(skill_dir).as_posix() for p in scripts]
-    stdlib = set(sys.stdlib_module_names)
-    has_install = bool(INSTALL_RE.search(skill_text))
+    manifests = " ".join(
+        p.read_text(encoding="utf-8", errors="replace")
+        for p in skill_dir.rglob("*")
+        if p.name in ("requirements.txt", "pyproject.toml", "package.json") and p.is_file()
+    )
+    skill_has_install = bool(INSTALL_RE.search(skill_text))
     for s in scripts:
         rel = s.relative_to(skill_dir).as_posix()
         if s.name not in skill_text and rel not in skill_text:
@@ -368,21 +460,23 @@ def check_scripts(rep: SkillReport, skill_dir: Path, skill_text: str) -> None:
             text = s.read_text(encoding="utf-8", errors="replace")
         except OSError:
             continue
-        third_party: set[str] = set()
-        if s.suffix == ".py":
-            local = {p.stem for p in s.parent.glob("*.py")}
-            for m in PY_IMPORT_RE.finditer(text):
-                mod = (m.group(1) or m.group(2) or "").split(".")[0]
-                if mod and mod not in stdlib and mod not in local and mod != "__future__":
-                    third_party.add(mod)
-        elif s.suffix in (".js", ".mjs", ".ts"):
-            for m in JS_IMPORT_RE.finditer(text):
-                mod = (m.group(1) or m.group(2) or "").replace("node:", "").split("/")[0]
-                if mod and mod not in NODE_BUILTINS:
-                    third_party.add(mod)
-        if third_party and not has_install:
-            rep.add("H1", "fix", s, 1,
-                    f"{rel} imports {', '.join(sorted(third_party))} but SKILL.md has no install line next to its use")
+        if PEP723_RE.search(text):
+            continue  # inline script metadata declares its own dependencies
+        local = {p.stem for p in s.parent.glob("*.py")}
+        header = "\n".join(text.splitlines()[:30])
+        undeclared, unnamed = [], []
+        for mod in sorted(required_imports(text, s.suffix, local)):
+            word = re.compile(r"(?<![\w-])" + re.escape(mod) + r"(?![\w-])", re.IGNORECASE)
+            if word.search(manifests) or (INSTALL_RE.search(header) and word.search(header)):
+                continue
+            if skill_has_install and word.search(skill_text):
+                continue
+            (unnamed if skill_has_install else undeclared).append(mod)
+        if undeclared:
+            rep.add("H1", "fix", s, 1, f"{rel} needs {', '.join(undeclared)} but nothing says how to install it")
+        if unnamed:
+            rep.add("H1", "check", s, 1, f"{rel} needs {', '.join(unnamed)}; SKILL.md has an install line "
+                    "but it does not name this package")
 
 
 def check_evals(rep: SkillReport, skill_dir: Path) -> None:
@@ -415,8 +509,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         skills = discover(args.paths)
         reports = [lint(s) for s in skills]
-    except (OSError, UnicodeError) as exc:
-        print(f"lint_skills: scan failed: {exc}", file=sys.stderr)
+    except Exception as exc:  # a crash must read as "scan failed", never as "no findings"
+        print(f"lint_skills: scan failed: {type(exc).__name__}: {exc}", file=sys.stderr)
         return 1
     if args.as_json:
         print(json.dumps([{**asdict(r), "findings": [asdict(f) for f in r.findings]} for r in reports], indent=2))
