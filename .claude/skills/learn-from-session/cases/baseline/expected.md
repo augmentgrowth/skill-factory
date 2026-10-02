@@ -1,7 +1,7 @@
 # Judgment rubric — replay of learn-from-session on the baseline input
 
 - [ ] Exactly one HIGH proposal: target `weekly-report`, quoting both signals 1 and 3 verbatim, with
-      the exact before → after edit of the output-order line.
+      the exact before → after edit of the opening-order line (metrics block first, then context).
 - [ ] Signal 2 (one-off, a different task) produces no proposal, or LOW at most.
 - [ ] Signal 4 is either dropped as client-specific detail or proposed with the account id treated
       as configuration, never written into the skill as a universal rule; it is never echoed into a
