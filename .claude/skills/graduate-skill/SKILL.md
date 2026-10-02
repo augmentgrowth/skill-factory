@@ -8,12 +8,23 @@ description: >-
   the installed skill-creator plugin, and copies the skill to the personal skills directory while
   the skill's build home stays the system of record. Not for building (build-skill) or fixing
   (improve-skill).
+metadata:
+  target-models: "claude-opus-5-5"
 ---
 
 You are graduating one skill: moving a factory-built skill into the builder's real workflow. The
 build home (the repo the skill was born in — see the spec's "Where skills are born") keeps the
 full git history as system of record; the install is a copy. Run the steps in
 order. A power user may jump straight to Step 3 (eval gate) alone — honor that without the rest.
+
+```
+Graduation progress:
+- [ ] 1. Pre-graduation checks pass — if not, back to the builder
+- [ ] 2. No CRITICAL efficiency finding — if one, fix it and repeat step 2
+- [ ] 3. Eval gate offered
+- [ ] 4. Copied to the personal skills directory without .env
+- [ ] 5. Tagged, published, output receipt handed over
+```
 
 ## Step 1 — Pre-graduation checks
 
@@ -26,8 +37,8 @@ Confirm the skill is actually done before moving it:
    escalate rather than clobber. Silent. Full rule: the spec's "Install the hook yourself, in
    preflight."
 1. **Quality bar.** Run the lint (`python3 ../audit-skill/scripts/lint_skills.py <skill-folder>`,
-   stdlib only) and judge the skill against the factory rubric
-   (`../audit-skill/references/rubric.md`) and `../build-skill/references/quality-bar.md`. Any
+   stdlib only; paths are relative to this skill's folder) and judge the skill against the factory
+   rubric (`../audit-skill/references/rubric.md`) and `../build-skill/references/quality-bar.md`. Any
    `fix` finding or failed P1 rule — send it back to the builder, do not graduate. P2/P3 findings
    are reported and the builder decides.
 2. **Test coverage.** `cases/baseline/` exists with a captured baseline the skilled output beats.
@@ -79,7 +90,9 @@ steps. In that case do exactly this handoff and stop; no guided-flow ceremony, n
 
 Copy the whole skill folder to the personal skills directory named in the spec's **Harness notes**
 matrix for the active harness (Claude Code: `~/.claude/skills/<name>/`; cite the matrix rather than
-hardcoding for any other harness).
+hardcoding for any other harness):
+`rsync -a --delete --exclude '.env' <skill-folder>/ ~/.claude/skills/<name>/` (`--delete` clears
+files from an earlier graduation; the excluded `.env` is kept).
 
 **The copy includes:** `cases/`, `CHANGELOG.md`, the `## Gotchas` section, `.env.example`, and the
 Improvement protocol block — **unless the skill's frontmatter is `static: true`**, in which case that
@@ -98,8 +111,9 @@ there via `improve-skill`, then re-graduate to refresh the installed copy.
 
 Graduation is a gated change, so bracket it (stage the skill folder by explicit path throughout):
 `<skill>/rollback-<n>` on the last accepted state before graduating, `<skill>/review-<n>` on the
-graduated candidate. Push the branch and both tags together. Then hand the builder the output
-receipt. Add `<skill>/known-good-<n>` only once they accept.
+graduated candidate. `git -C <repo> fetch --tags`; tag; then
+`git -C <repo> push origin HEAD refs/tags/<skill>/rollback-<n> refs/tags/<skill>/review-<n>`.
+Then hand the builder the output receipt. Add `<skill>/known-good-<n>` only once they accept.
 
 **A rejected graduation needs two undos, not one.** Restore the build home from the rollback tag
 *and* reinstall the personal copy from the restored version. The installed copy is frozen — a
