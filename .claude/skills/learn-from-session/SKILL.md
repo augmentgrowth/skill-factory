@@ -60,13 +60,12 @@ For each approved edit:
 - Before editing: `git -C <repo> status --porcelain -- <skill-folder>`; if it lists files
   you did not create, skip that skill and say so. `git -C <repo> fetch --tags`, then tag the
   current state `<skill>/rollback-<n>` (next unused n).
-- Apply the edit and its CHANGELOG line, then `git -C <repo> add <skill-folder>` and
+- Apply the edit and its CHANGELOG line (`[YYYY-MM-DD] Learned from session: <what>`), then `git -C <repo> add <skill-folder>` and
   `git -C <repo> commit -m "Learn from session for <skill>: <what>" -- <skill-folder>`;
   tag it `<skill>/review-<n>`.
 - Publish without asking again:
   `git -C <repo> push origin HEAD refs/tags/<skill>/rollback-<n> refs/tags/<skill>/review-<n>`.
   If refused, say once that it is saved on this machine only.
-- Add a CHANGELOG.md line: `[YYYY-MM-DD] Learned from session: <what>`.
 
 **Declined signals are discarded** — never queued, never re-proposed from memory.
 
