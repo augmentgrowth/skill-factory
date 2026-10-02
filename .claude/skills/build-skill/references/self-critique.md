@@ -1,7 +1,7 @@
-# Self-critique — the five checks
+# Self-critique — the six checks
 
 Run this pass at Step 5, **before showing the builder the draft**. Review honestly
-against all five checks, fix what fails, then present an honest assessment — not a
+against all six checks, fix what fails, then present an honest assessment — not a
 finished-product pitch. The organ wording below is preserved from vibe-skill-creator's
 Step 6; keep the italic remedy lines intact.
 
@@ -28,6 +28,14 @@ Step 6; keep the italic remedy lines intact.
 - [ ] Do they demonstrate the principles viscerally?
 
 *If examples are theoretical, make them concrete.*
+
+### Model Calibration Check
+- [ ] Would a current model over-apply anything here — all-caps MUST/NEVER, rigid steps for
+      judgment work, a generic "double-check your work"?
+- [ ] Does any line ask Claude to write out its reasoning? (Ask for a short explanation instead.)
+- [ ] If the skill targets a smaller model, is every step it could skip explicit or scripted?
+
+*If it reads like it was written for an older model, say it plainly and give the reason instead.*
 
 ### Focus Check
 - [ ] Does every section earn its place?

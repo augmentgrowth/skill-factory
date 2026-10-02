@@ -14,7 +14,10 @@ Any workflow-shaped or skill-building utterance routes into the `build-skill` sk
 it. Triggers include "I want a skill for…", "here's my weekly task…", "help me build a skill",
 "turn this into a skill", or a builder describing a recurring task they want to automate. Read
 `.claude/skills/build-skill/SKILL.md` and follow it. Improvement, learning, and graduation route to
-`improve-skill`, `learn-from-session`, and `graduate-skill` respectively.
+`improve-skill`, `learn-from-session`, and `graduate-skill` respectively. Auditing — "audit my
+skills", "check my skills against best practices", "are my skills up to date", a skills folder in
+any repo — routes to `audit-skill` (`.claude/skills/audit-skill/SKILL.md`): propose-first, it
+reports per-rule evidence and edits only what the builder approves.
 
 ## Where skills are born: the build home
 
@@ -47,12 +50,21 @@ Classify every skill before drafting (deep guidance: `templates/taxonomy.md`):
 
 ## The quality bar
 
-Enforce these while drafting. Anchors: Anthropic, "Lessons from building Claude Code: How we use
-skills" (claude.com/blog, 2026-06-03) and the Anthropic skills PDF, "The Complete Guide to Building
-Skills for Claude" (January 2026). Refresh prescriptions against both when they update.
+Enforce these while drafting. The full, rule-by-rule version is the factory rubric,
+`.claude/skills/audit-skill/references/rubric.md` — the one source build-skill drafts against,
+graduate-skill gates on, and audit-skill audits against; its mechanical half is
+`.claude/skills/audit-skill/scripts/lint_skills.py`. Anchors, last refreshed 2026-10-02: Anthropic's
+"Skill authoring best practices" (platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices),
+the Claude Code skills docs, the Agent Skills spec (agentskills.io), Anthropic's prompting pages for
+current models, "Lessons from building Claude Code: How we use skills", "The Complete Guide to
+Building Skills for Claude" (January 2026), and OpenAI's Codex skill-creator. Where they disagree the
+newer source wins: the January guide's advice to add `CRITICAL:` headers is superseded by the
+current-model pages. Refresh the rubric — not this list — when they update.
 
-- **Descriptions are trigger mechanisms, not summaries.** Pack the description with literal activation
-  keywords a builder would actually say. Missing trigger conditions is the top reason skills fail to load.
+- **Descriptions are trigger mechanisms, not summaries.** Third-person what, an explicit "Use when…",
+  the phrases a builder would actually say, and a boundary where a neighbouring skill could misroute —
+  but no catch-all keyword lists, which attract unrelated requests. Missing trigger conditions is still
+  the top reason skills fail to load.
 - **Never restate what Claude already knows.** Spend tokens only on domain knowledge that moves Claude
   off its defaults. "Claude already knows how to code" — do not re-teach it.
 - **SKILL.md under 500 lines.** Split into reference files as you approach the limit.
@@ -61,6 +73,15 @@ Skills for Claude" (January 2026). Refresh prescriptions against both when they 
   where the operation is fragile or irreversible. Match specificity to fragility.
 - **A `## Gotchas` section scaffolded at birth.** Grow it from real failures. It is the highest-signal
   content in a skill; every skill starts with the heading present, even if empty.
+- **Reference files over 100 lines open with a Contents list**, and every reference links straight from
+  SKILL.md with when to read it.
+- **Ordered jobs carry a checklist** Claude copies and ticks off, with a "go back to step N" line; where
+  quality matters, the skill checks output against something concrete, fixes, and checks again.
+- **Write for current models.** Plain imperatives with the reason, not all-caps MUST/NEVER; no
+  over-explaining; no instruction to write out reasoning; no generic "double-check your work". Record the
+  models a skill was tested on in `metadata` → `target-models` — never `model:`, which switches the
+  model in Claude Code.
+- **Install line next to every script or library.** Never assume a package is installed.
 
 ## The silent-git contract
 
@@ -100,7 +121,7 @@ git-tracked history from birth.
   and must not be papered over:** a clone that nobody ever drives through the factory stays
   unguarded, which is why `README.md` states the install as a plain command for anyone who pushes
   by hand. Every skill that pushes runs this preflight — `build-skill`, `improve-skill`,
-  `graduate-skill`, `learn-from-session` — because the gap belongs to whichever one touches git
+  `graduate-skill`, `learn-from-session`, `audit-skill` — because the gap belongs to whichever one touches git
   first, not to the one that happens to be documented.
 - **Never rewrite history.** Rollback is a path-scoped restore committed as a *new* commit. Repo
   HEAD never moves, and no published commit is ever amended, rebased, or force-pushed.
@@ -134,6 +155,13 @@ vocabulary, no severity ratings.
 Bracket every gated change with tags so the receipt has a rollback target: `<skill>/rollback-<n>`
 before, `<skill>/review-<n>` on the shipped candidate. On acceptance, add `<skill>/known-good-<n>`.
 On rejection, path-scoped restore from the rollback tag as a new commit, then release again.
+
+**Changes approved before they are made have passed the gate.** `learn-from-session` and `audit-skill`
+show the builder the exact edit and apply only what was approved, so their edits ship with no output
+receipt. (One deliberate difference: outside a repo that carries the release gate, `audit-skill` asks
+once before publishing, because a builder's own or team repo may publish straight to everyone's main
+line; `learn-from-session` publishes on its approval.) They still get the `<skill>/rollback-<n>` tag
+first (and `review-<n>` on the shipped state), so "undo that" restores to the state just before them instead of rolling past earlier accepted work.
 
 **One exception, and it is not a human gate:** graduation's CRITICAL script-efficiency stop. That
 tests an operational property — scale, quota, silent truncation — which output review cannot
@@ -209,7 +237,11 @@ Mark a non-self-modifying skill with `static: true` in its SKILL.md frontmatter.
 - The anneal protocol checks this flag FIRST. A static skill gets a fix *proposal* to the builder, never
   self-modification.
 - Graduation omits the improvement-protocol block for static skills.
-- Unknown frontmatter keys are ignored by SKILL.md-compatible harnesses, so the flag is portability-free.
+- Claude Code and Codex ignore unknown frontmatter keys at runtime, so the flag is harmless there. Strict
+  upload validators — claude.ai skill upload, the Skills API, Anthropic's `package_skill` and OpenAI's
+  `quick_validate` — reject any key outside the spec (`name`, `description`, `license`, `compatibility`,
+  `metadata`, `allowed-tools`), so strip `static:` (and `public_safe:`) from a copy uploaded there. It
+  stays top level here because the skill-home tooling reads and rewrites it there.
 
 ## Git-less degraded mode
 
@@ -229,9 +261,9 @@ guaranteed. Differences are additive, not conflicting.
 | Concern | Claude Code | Codex (verified) |
 |---|---|---|
 | Repo spec file | `CLAUDE.md`, auto-loaded | `AGENTS.md` symlink → `CLAUDE.md`; Codex auto-loads repo-root `AGENTS.md` and the symlink resolves (it quoted the spec and routed with no prompt to read it) |
-| Project skill discovery | `.claude/skills/` (auto-discovered, incl. nested) | **Repo-root `.agents/skills/` IS auto-discovered** (verified 2026-08-05 vs Codex CLI 0.144.0; the upward scan from cwd stops at the repo root, so a link placed in an *ancestor* of the repo, e.g. `~/code/.agents/skills/`, is not reached). `.claude/skills/` is still completely invisible to Codex regardless of location — this factory's own skills live there, so Codex still reaches them only because `AGENTS.md` instructs it to read `.claude/skills/<name>/SKILL.md` by path. Codex's other native auto-discovery tier is personal-only (`~/.codex/skills`), where symlinks resolve correctly. |
-| Personal install target | `~/.claude/skills/` | `~/.codex/skills/` (or `$CODEX_HOME/skills`) — auto-discovered there |
-| Ignored frontmatter | — | Everything except `name` + `description` is read-inert — so `context: fork`, `allowed-tools`, `hooks`, and `static:` are all ignored (Codex's own skill-creator docs: "the only fields that Codex reads"). The `static:` flag stays portability-free. |
+| Project skill discovery | `.claude/skills/` (auto-discovered, incl. nested) | **Repo-root `.agents/skills/` IS auto-discovered** (verified 2026-08-05 vs Codex CLI 0.144.0; the upward scan from cwd stops at the repo root, so a link placed in an *ancestor* of the repo, e.g. `~/code/.agents/skills/`, is not reached). `.claude/skills/` is still completely invisible to Codex regardless of location — this factory's own skills live there, so Codex still reaches them only because `AGENTS.md` instructs it to read `.claude/skills/<name>/SKILL.md` by path. Per Codex source (read 2026-10-02, not run-verified), `.agents/skills/` is scanned in every directory from the repo root down to the cwd, not only at the root. Codex's personal tier is `~/.agents/skills/`; `~/.codex/skills/` (`$CODEX_HOME/skills`) is still read but marked deprecated in source. Symlinks resolve in both. |
+| Personal install target | `~/.claude/skills/` | `~/.agents/skills/` (current, per Codex source 2026-10-02). `~/.codex/skills/` (or `$CODEX_HOME/skills`) still auto-loads and was the verified target on 0.144.0, but is marked deprecated — prefer `~/.agents/skills/` for new installs. |
+| Ignored frontmatter | — | At runtime Codex reads only `name`, `description`, and `metadata.short-description`; everything else — `context: fork`, `allowed-tools`, `hooks`, `static:` — is inert. Descriptions are cut at 1,024 chars and the skill list is capped at ~2% of context. Codex's bundled `quick_validate.py` rejects keys outside `name`, `description`, `license`, `allowed-tools`, `metadata`, so `static:` fails *validation* though not *loading* (see The static flag). |
 | Extra manifest | none | `agents/openai.yaml` is **optional** UI metadata only (display name, icon, chips, `policy.allow_implicit_invocation`). Never required — build + anneal ran green with none present. |
 
 **Gotcha:** adding a new skill directory mid-session may not hot-load into the `/` menu. Run with-skill

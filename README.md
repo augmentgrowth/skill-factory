@@ -12,6 +12,7 @@ A factory-in-a-box for building top-tier [Claude skills](https://docs.claude.com
 - **Guided build** (`build-skill`) — three intake paths: describe your workflow, do the work live and extract the skill from the session, or research what great looks like first. Every build captures a no-skill baseline before drafting, so "done" means *visibly better than the baseline*, side by side.
 - **Self-annealing** (`improve-skill`) — when a skill fails in real use, the agent fixes it, re-tests against the captured failing case, documents the gotcha, and commits. One failure, one commit, permanently learned.
 - **Preference mining** (`learn-from-session`) — corrections you make during a session become proposed skill edits, ranked by confidence. Nothing is applied without your approval.
+- **Skill audit** (`audit-skill`) — checks existing skills, in this repo or any other, against current Anthropic and OpenAI skill-authoring guidance: a per-skill table of rule, verdict, file:line evidence and the exact fix, then a ranked change list. Nothing changes until you pick which fixes to apply; each skill is then re-checked and saved on its own.
 - **Graduation** (`graduate-skill`) — install a finished skill for use everywhere, with an efficiency review for script-backed skills and an optional formal eval gate.
 
 ## Requirements
@@ -49,9 +50,21 @@ claude plugin marketplace add augmentgrowth/skill-factory
 claude plugin install skill-factory@skill-factory
 ```
 
-The four factory skills then load in every session, namespaced as `skill-factory:build-skill`, `skill-factory:improve-skill`, and so on. The marketplace is named `skill-factory`, not `augmentgrowth` — hence `skill-factory@skill-factory`.
+The five factory skills then load in every session, namespaced as `skill-factory:build-skill`, `skill-factory:improve-skill`, and so on. The marketplace is named `skill-factory`, not `augmentgrowth` — hence `skill-factory@skill-factory`.
 
 Skills you build via the plugin are committed to whatever git repo you're in — so stand in the repo you want to own the skill before you say "build me a skill." Don't run both paths against the same folder: a clone that's open as a project already auto-loads these skills from `.claude/skills/`, and installing the plugin on top registers a second, namespaced copy of each.
+
+### Audit skills in another repo
+
+With the plugin installed (or already installed — refresh it first so you have the audit: `claude plugin marketplace update skill-factory` then `claude plugin update skill-factory@skill-factory`, and restart the session), open the repo that holds your skills and say:
+
+> audit my skills
+
+It finds every skill under `.claude/skills/`, `.agents/skills/` or `skills/` (or only the folder or skill you name), reports, and stops for your pick. In a repo the factory doesn't manage it saves approved fixes locally and asks before publishing them. The mechanical half also runs on its own, no install needed:
+
+```bash
+python3 <factory>/.claude/skills/audit-skill/scripts/lint_skills.py <path-to-skills-or-repo>
+```
 
 **If the factory skills don't auto-load** (unusual setups): tell the agent directly — *"read `.claude/skills/build-skill/SKILL.md` and follow it."* This manual path is a degraded fallback, not the normal route; if you need it regularly, check that you opened the repo folder itself (not a parent directory) in Claude Code.
 

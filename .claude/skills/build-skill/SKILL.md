@@ -1,12 +1,15 @@
 ---
 name: build-skill
-description: Guided flow to turn a recurring workflow into a top-tier, git-tracked
+description: >-
+  Guided flow to turn a recurring workflow into a top-tier, git-tracked
   Claude skill. Use when someone wants to build, make, or create a skill; "turn my
   weekly workflow into a skill", "capture how I do X", "I want a skill for…",
   "automate my recurring task", or describes a repeating task they want on rails.
   Triggers on: build a skill, make a skill, create a skill, skill for, turn this
   into a skill, capture my process. NOT for ordinary coding or debugging, and NOT
   for improving an existing factory skill (that routes to improve-skill).
+metadata:
+  target-models: "claude-opus-5-5"
 ---
 
 # Build a Skill
@@ -21,6 +24,18 @@ contract; this skill is its executable guided flow.
 
 Run the steps in order. Per-path detail lives in `references/` — load only what the
 chosen path needs.
+
+```
+Build progress:
+- [ ] 0. Preflight passed (or degraded mode announced)
+- [ ] 1. Intake path chosen
+- [ ] 2. Baseline input + no-skill output saved; birth save made
+- [ ] 3. Type named; split decided
+- [ ] 4. Draft written; Gotchas scaffolded
+- [ ] 5. Lint has no fix findings; six checks pass — if not, back to step 4
+- [ ] 6. Side-by-side shown; builder judged it a win — if lose/tie, back to step 4
+- [ ] 7. Saved, tagged, published; personal install offered
+```
 
 ## Step 0 — Preflight (first action)
 
@@ -53,12 +68,12 @@ Three paths. Honor an explicit choice; otherwise infer from how the builder talk
   `references/describe-first.md`.
 - **reverse-engineer** — do the task live together, then extract the skill from the
   successful session. See `references/reverse-engineer.md`. **A builder who can't
-  articulate their workflow DEFAULTS here** (least articulation required).
+  articulate their workflow defaults here** (least articulation required).
 - **research-backed** — research what great looks like externally, then encode it.
   See `references/research-backed.md`. Needs web tools; **a web-less session falls
   back to describe-first with an explicit notice** — never fabricated sources.
 
-## Step 2 — Baseline capture (before ANY drafting)
+## Step 2 — Baseline capture (before any drafting)
 
 The baseline is captured first so the final side-by-side is literal. Do not draft yet.
 
@@ -88,10 +103,23 @@ Decide the split now, before you write a line.
 
 ## Step 4 — Draft
 
-Draft from `templates/TEMPLATE_Skill.md` against the quality bar
-(`references/quality-bar.md`). Match specificity to fragility: prose where the agent
-should think, exact text or `scripts/` where the operation is fragile. Scaffold the
-`## Gotchas` section at birth, even if it starts with one placeholder line.
+Draft from `templates/TEMPLATE_Skill.md` against the factory rubric
+([../audit-skill/references/rubric.md](../audit-skill/references/rubric.md)) and the
+quality bar ([references/quality-bar.md](references/quality-bar.md)). `templates/` lives at
+the factory's root — in a clone that is the repo root; under a plugin install it is
+`${CLAUDE_PLUGIN_ROOT}/templates/`. Three rubric rules shape the draft most:
+
+- **Strictness matches fragility.** For each step ask what happens if Claude does it
+  differently: nothing much → prose with the reason; consequential (money, deleting,
+  sending, irreversible) → an exact command or a `scripts/` file.
+- **Ordered jobs get a checklist** Claude copies and ticks off, with a "go back to step N"
+  line wherever a check can fail; **quality-critical output gets a concrete check** (a
+  script, rubric, or reference) to fix against and re-run.
+- **Write for current models:** plain imperatives with the reason, no all-caps MUST/NEVER,
+  no over-explaining, no "write out your reasoning", key rules near the top. Record the
+  models you test on in `metadata` → `target-models`.
+
+Scaffold the `## Gotchas` section at birth, even if it starts with one placeholder line.
 
 **Credentials are lazy (only if the skill actually needs them):** scaffold a committed
 `.env.example` documenting every variable in the skill folder, then set keys up with the
@@ -100,9 +128,16 @@ or logging any value**. Never commit, print, or repeat a secret. The `.env` is g
 
 ## Step 5 — Self-critique
 
-Run the five checks in `references/self-critique.md` (Voice / Principles / Anti-Pattern
-/ Example / Focus) and fix what fails **before showing the builder the draft**. Present
-an honest assessment: what improved, what is still weak, what you need answered.
+First run the lint —
+`python3 "${CLAUDE_SKILL_DIR}/../audit-skill/scripts/lint_skills.py" <skill-folder>` (stdlib
+only, no install; `${CLAUDE_SKILL_DIR}` is this skill's folder — on harnesses that don't
+substitute it, use that folder's path) — and resolve every `fix` finding before anything
+else; it catches the mechanical misses (limits, nesting, missing Contents lists, undeclared
+dependencies) so your own pass can spend its attention on judgment. Then run the six
+checks in `references/self-critique.md` (Voice / Principles / Anti-Pattern / Example /
+Model Calibration / Focus) and fix what
+fails **before showing the builder the draft**. Present an honest assessment: what
+improved, what is still weak, what you need answered.
 
 **Script efficiency pass (script-backed drafts only).** If the draft added or changed
 anything in `scripts/`, dispatch a **fresh sub-agent** to run the sibling
@@ -121,18 +156,29 @@ hot-load into the `/` menu; do not rely on it.) Render **both** outputs side by 
 baseline vs with-skill. **The builder judges.**
 
 - Skill loses or ties → iterate: back to Step 4.
-- **This gate REFUSES to close without the side-by-side being shown to the builder.**
+- **Do not close this gate until the side-by-side has been shown to the builder.**
 
 ## Step 7 — Done + personal install
 
-1. **One commit** (commit 2): the finished skill plus changelog line one, staged by the
-   skill folder's explicit path. Then set the first known-good tag `<skill>/known-good-1`
-   so a rollback target always exists. Degraded mode: skip commit and tag with the notice.
-2. **Offer the personal install.** Copy the skill folder — including `cases/`,
+1. **In a factory clone, settle publishability first.** A factory clone is a repo whose
+   `githooks/pre-push` invokes `scripts/release-gate.py`. Its release gate refuses to publish a
+   new skill whose frontmatter lacks `public_safe: true`. Ask the builder once, plainly: "Is this
+   skill safe for anyone to see — no client names, private data, or internal detail?" On a yes,
+   add `public_safe: true` to the frontmatter; on a no, leave it out and say the skill will stay
+   on this machine (or in their private repo). Skip this outside a factory clone.
+2. Save the finished skill plus changelog line one, scoped to the folder:
+   `git -C <repo> add .claude/skills/<name>`
+   `git -C <repo> commit -m "<name>: finished skill" -- .claude/skills/<name>`
+   `git -C <repo> tag <name>/known-good-1`
+   When the remote is yours: `git -C <repo> push origin HEAD refs/tags/<name>/known-good-1`.
+   If the push is refused (a factory clone's gate refuses a new skill without
+   `public_safe: true`), say once, plainly, that the skill is saved on this machine only.
+   Degraded mode: skip all of this with the notice.
+3. **Offer the personal install.** Copy the skill folder — including `cases/`,
    `CHANGELOG.md`, and `.env.example` if present, but **NEVER** the real `.env` — to the
    harness's personal skills directory (Claude Code: `~/.claude/skills/<name>/`; other
    harnesses per the spec's Harness notes matrix in `CLAUDE.md`).
-3. Tell the builder the **build home remains the skill's system of record** — that's
+4. Tell the builder the **build home remains the skill's system of record** — that's
    where its history lives and where to come back to improve it (via `improve-skill`).
    There is no later migration step.
 
@@ -141,7 +187,7 @@ baseline vs with-skill. **The builder judges.**
 - **Hot-load is not guaranteed.** A skill folder created mid-session may not appear in the
   `/` menu; always run the with-skill test by explicit invocation (name it or point the
   agent at its `SKILL.md`), never by relying on the menu.
-- **Under Codex, project skills never auto-load at all.** Step 2's "it auto-loads for the
+- **Under Codex, `.claude/skills/` skills never auto-load.** Step 2's "it auto-loads for the
   with-skill test" is Claude-Code-only. Codex does not treat `.claude/skills/` as invocable
   skills (verified 2026-07-15) — the with-skill test there is *always* a direct `SKILL.md`
   read, which is how `AGENTS.md` already routes into every skill. The `.claude/skills/<name>/`

@@ -61,7 +61,8 @@ Only CRITICAL findings block. Everything else is reported; the builder chooses w
 
 ## Reporting
 
-Group findings by severity, CRITICAL first. If any CRITICAL exists, state plainly that graduation is
-blocked and list the exact fixes required to unblock. If none, note the skill passes the efficiency
-gate and list any HIGH/MEDIUM/LOW notes for the builder to weigh. Procedure-only skills never reach
-this file — see the SKILL's skip rule.
+Group findings by severity, CRITICAL first. If any CRITICAL exists, graduation is blocked: fix each
+one yourself (at write or anneal time, return them to the caller), re-run this checklist, and
+continue only when none remain. Tell the builder only that you are fixing something first. If
+none, note the skill passes the efficiency gate and list any HIGH/MEDIUM/LOW notes for the builder
+to weigh. Procedure-only skills never reach this file — see the SKILL's skip rule.

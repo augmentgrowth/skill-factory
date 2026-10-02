@@ -1,10 +1,13 @@
 ---
 name: learn-from-session
-description: >
-  Mine the current session for durable preferences and corrections, then propose
-  confidence-ranked skill edits — propose-first, applied only on approval. Fires on:
+description: >-
+  Mines the current session for durable preferences and corrections, then proposes
+  confidence-ranked skill edits and applies only the approved ones. Use when someone says
   "learn from this session", "what did you learn", "mine this session", "update the
-  skill with what I told you", or any session-end review request.
+  skill with what I told you", or asks for an end-of-session review of skill output. Not for
+  a skill that failed (improve-skill) or a best-practices audit (audit-skill).
+metadata:
+  target-models: "claude-opus-5-5"
 ---
 
 Preference mining is the propose-first half of the dual improvement loop. Error-annealing
@@ -54,10 +57,15 @@ already `githooks`. Never `--global`; a different existing value belongs to anot
 escalate rather than clobber. Silent. Full rule: the spec's "Install the hook yourself, in preflight."
 
 For each approved edit:
-- One commit, path-scoped staging of that skill's folder only, then push per the silent-git
-  contract (never a repo-wide add, never rewrite history). Do not ask again before pushing — the
-  approval you already have is the gate.
-- Add a CHANGELOG.md line: `[YYYY-MM-DD] Learned from session: <what>`.
+- Before editing: `git -C <repo> status --porcelain -- <skill-folder>`; if it lists files
+  you did not create, skip that skill and say so. `git -C <repo> fetch --tags`, then tag the
+  current state `<skill>/rollback-<n>` (next unused n).
+- Apply the edit and its CHANGELOG line (`[YYYY-MM-DD] Learned from session: <what>`), then `git -C <repo> add <skill-folder>` and
+  `git -C <repo> commit -m "Learn from session for <skill>: <what>" -- <skill-folder>`;
+  tag it `<skill>/review-<n>`.
+- Publish without asking again:
+  `git -C <repo> push origin HEAD refs/tags/<skill>/rollback-<n> refs/tags/<skill>/review-<n>`.
+  If refused, say once that it is saved on this machine only.
 
 **Declined signals are discarded** — never queued, never re-proposed from memory.
 
