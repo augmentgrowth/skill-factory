@@ -7,13 +7,13 @@ against (audit-skill). Rule IDs are stable: `scripts/lint_skills.py` tags its fi
 
 - How to judge a rule
 - A. Discovery and frontmatter (A1–A4)
-- B. Concision and content (B1–B6)
+- B. Concision and content (B1–B7)
 - C. Structure and progressive disclosure (C1–C6)
-- D. Degrees of freedom (D1)
+- D. Degrees of freedom and safety (D1–D2)
 - E. Ordered workflows (E1)
 - F. Feedback loops (F1)
 - G. Model calibration (G1–G5)
-- H. Scripts and dependencies (H1–H4)
+- H. Scripts, dependencies and stored data (H1–H5)
 - I. Examples and templates (I1)
 - J. Gotchas (J1–J2)
 - K. Evaluation (K1)
@@ -38,7 +38,8 @@ Priority for the ranked change list:
 
 - **P1** — the skill fails to load, fails to trigger, misfires on unrelated requests, or can take a
   consequential action (money, deletion, sending, anything irreversible) without an exact command or
-  script. Also: instructions that make current models refuse (G4).
+  script. Also: instructions that make current models refuse (G4), and running or obeying untrusted
+  remote content (D2).
 - **P2** — the skill works but wastes context or drifts: structure (C), missing checklist or
   feedback loop where order or quality matters (E, F), undeclared dependencies (H1), shouting (G2).
 - **P3** — polish: terminology, time-stamped phrasing, missing target-model note, extra examples.
@@ -95,6 +96,11 @@ escape hatch ("use B only when…").
 **B6 Scope stays narrow.** A single example, past failure, or personal preference written up as a
 universal rule is a fix: narrow it to the situation it came from.
 
+**B7 One job per skill.** The skill does one thing that fits one type — capability (a tool or
+integration), knowledge (judgment Claude lacks) or workflow (a sequence that chains other skills by
+name). Two unrelated jobs in one skill, or a workflow that pastes another skill's logic inline, is a
+fix: split it, and have the workflow call the other skill by name.
+
 ## C. Structure and progressive disclosure
 
 **C1 SKILL.md under 500 lines** (roughly 5k tokens). Over that, split by area into references.
@@ -113,7 +119,7 @@ whose entries match its headings, so a partial read still shows the map.
 
 **C6 Links resolve.** A link to a file that is not there is a silent dead end.
 
-## D. Degrees of freedom
+## D. Degrees of freedom and safety
 
 **D1 Strictness matches fragility.** For each step ask: what happens if Claude does this
 differently?
@@ -123,6 +129,13 @@ differently?
 - Consequential (money, deleting, sending, publishing, anything irreversible or externally visible)
   → an exact command or a script, with the authorization point immediately before the action and a
   stopping condition for any retry loop. Prose here is a P1 fix.
+
+**D2 Untrusted content is handled deliberately.** Fetched pages, API responses, uploaded files and
+other remote content are data, never instructions: the skill says so wherever it reads them, and it
+never pipes a download straight into a shell or runs code it fetched at run time. Any
+step that sends data out (posting, emailing, uploading, calling a third-party API with the
+builder's content) names exactly what leaves and where it goes. A skill that fetches from external
+URLs gets the extra scrutiny: its sources can change under it.
 
 ## E. Ordered workflows
 
@@ -136,6 +149,11 @@ fail ("If the totals don't reconcile, go back to step 2"). n.a. when order does 
 the concrete check — a validator script, a rubric, a reference file, the source data — then fix and
 check again, proceeding only when it passes. A generic "double-check your work" is *not* this and is
 a fix to remove: current Opus models already self-verify and over-verify when told to.
+
+The check has to be able to fail. A validator is only evidence once it has been run against a
+deliberately bad output (the no-skill baseline is usually one; better, a draft that breaks each rule
+it claims to enforce) and caught it. A checker that passes everything — or checks format while the
+skill's core rule goes unchecked — is a fix, however good it looks on the page.
 
 ## G. Model calibration
 
@@ -160,7 +178,7 @@ plausibly skip — a check, a file it must read, a script it must run — is exp
 scope is stated outright (newer Sonnet models follow instructions literally). n.a. when the skill
 targets only the largest models.
 
-## H. Scripts and dependencies
+## H. Scripts, dependencies and stored data
 
 **H1 Install line next to use.** Every third-party package has its install command and its import
 or invocation together where the skill first uses it (`pip install pypdf`, then
@@ -175,6 +193,15 @@ diagnostics to stderr, and keep output bounded. Consequential scripts offer a dr
 
 **H4 MCP tools fully qualified.** Name tools as `Server:tool_name`, not a bare tool name that may
 collide.
+
+**H5 Settings, secrets and accumulated data each have a known home.** Per-user setup (an account
+id, a channel name) lives in a `config.json` in the skill folder that the skill asks the builder to
+fill on first run — gitignored when it is personal — never hard-coded in a script. Secrets follow the
+credential rule: `.env` in the skill folder, gitignored, recreated from `.env.example`. Data that
+accumulates across runs (logs, history, caches) goes somewhere that survives an update or
+reinstall, because the skill folder may be replaced: `${CLAUDE_PLUGIN_DATA}` for plugin skills
+(substituted only there), or a path outside the folder the skill names for project skills. n.a.
+for skills with no settings or stored data.
 
 ## I. Examples and templates
 
@@ -196,6 +223,11 @@ and its expected output or rubric, ideally three scenarios including one that sh
 Without it, no change can be proven to keep the skill working. Fix: capture one representative input
 now (the audit can draft it; the builder confirms it).
 
+A case only proves something if the skill doesn't contain its answers. When the skill's rules or
+examples quote the sample's data or outputs computed from it (not standing rules like a target the
+builder set), the replay measures recall, not the skill: fix by moving the skill's examples to different numbers, or by adding a second case the
+skill has never seen.
+
 ## L. Factory extras
 
 **L1 Factory-built skills keep the factory's records.** n.a. for skills the factory did not build.
@@ -210,11 +242,12 @@ Last refreshed 2026-10-02 against:
 - Anthropic, Skill authoring best practices —
   platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices (A1–A3, B1–B3, B5,
   C1–C5, D1, E1, F1, H1–H4, I1, K1)
-- Claude Code skills docs — code.claude.com/docs/en/skills (A2, A4, B4)
+- Claude Code skills docs — code.claude.com/docs/en/skills (A2, A4, B4, H5)
+- Anthropic, Agent Skills overview — security considerations (D2)
 - Agent Skills specification — agentskills.io/specification (A1, A2, A4, C2)
 - Anthropic prompting pages for current models (Opus 5 / 5.5, Fable 5 / 5.1, Sonnet 5 / 5.5) —
   platform.claude.com/docs/en/build-with-claude/prompt-engineering/ (F1, G2–G5)
-- "Lessons from building Claude Code: How we use skills" (B1, J1–J2) and "The Complete Guide to
+- "Lessons from building Claude Code: How we use skills" (B1, B7, H5, J1–J2) and "The Complete Guide to
   Building Skills for Claude", January 2026 (A3, K1). The guide's advice to add `CRITICAL:` headers
   is superseded by the current-model pages (G2).
 - OpenAI Codex bundled skill-creator and `plugin-eval` scorer (A3 boundaries, A4, B6, D1 stopping

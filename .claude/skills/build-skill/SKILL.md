@@ -32,7 +32,7 @@ Build progress:
 - [ ] 2. Baseline input + no-skill output saved; birth save made
 - [ ] 3. Type named; split decided
 - [ ] 4. Draft written; Gotchas scaffolded
-- [ ] 5. Lint has no fix findings; six checks pass — if not, back to step 4
+- [ ] 5. Lint has no fix findings; six checks pass; independent audit has no open P1/P2 — if not, back to step 4
 - [ ] 6. Side-by-side shown; builder judged it a win — if lose/tie, back to step 4
 - [ ] 7. Saved, tagged, published; personal install offered
 ```
@@ -119,6 +119,12 @@ the factory's root — in a clone that is the repo root; under a plugin install 
   no over-explaining, no "write out your reasoning", key rules near the top. Record the
   models you test on in `metadata` → `target-models`.
 
+**Don't teach to the test.** Rules and examples in the skill never quote the sample's data or
+the answers computed from it — this week's totals, per-row results, the expected output from
+`cases/baseline/input.md`; use a different week, client or sample. Standing rules the builder
+states (a target, a threshold, a channel) belong in the skill. A skill that contains its
+fixture's answers wins the side-by-side by recall, and the replay proves nothing about next week.
+
 Scaffold the `## Gotchas` section at birth, even if it starts with one placeholder line.
 
 **Credentials are lazy (only if the skill actually needs them):** scaffold a committed
@@ -135,9 +141,20 @@ substitute it, use that folder's path) — and resolve every `fix` finding befor
 else; it catches the mechanical misses (limits, nesting, missing Contents lists, undeclared
 dependencies) so your own pass can spend its attention on judgment. Then run the six
 checks in `references/self-critique.md` (Voice / Principles / Anti-Pattern / Example /
-Model Calibration / Focus) and fix what
-fails **before showing the builder the draft**. Present an honest assessment: what
-improved, what is still weak, what you need answered.
+Model Calibration / Focus) and fix what fails.
+
+**Independent audit (every draft).** You wrote the draft, so you are the worst judge of it.
+Dispatch a **fresh sub-agent** with only three things: the draft's folder path, the path to
+`../audit-skill/SKILL.md` (relative to this skill's folder), and the instruction "Follow this
+audit skill's steps 1–4 on that one skill, report only — change nothing, and stop at the
+question. Run its scripts rather than trusting them, including feeding any checker a
+deliberately bad output — but never run anything that sends, posts, deletes or spends." Fix every P1 and P2 it reports (or say in one line why a finding
+does not apply),
+re-run the lint, and only then show the builder the draft. P3 items go into the honest
+assessment for the builder to decide.
+
+Present the draft **with an honest assessment**: what improved, what is still weak, what you
+need answered.
 
 **Script efficiency pass (script-backed drafts only).** If the draft added or changed
 anything in `scripts/`, dispatch a **fresh sub-agent** to run the sibling
@@ -175,7 +192,7 @@ baseline vs with-skill. **The builder judges.**
    `public_safe: true`), say once, plainly, that the skill is saved on this machine only.
    Degraded mode: skip all of this with the notice.
 3. **Offer the personal install.** Copy the skill folder — including `cases/`,
-   `CHANGELOG.md`, and `.env.example` if present, but **NEVER** the real `.env` — to the
+   `CHANGELOG.md`, and `.env.example` if present, but **NEVER** the real `.env` (or a personal `config.json`) — to the
    harness's personal skills directory (Claude Code: `~/.claude/skills/<name>/`; other
    harnesses per the spec's Harness notes matrix in `CLAUDE.md`).
 4. Tell the builder the **build home remains the skill's system of record** — that's
@@ -183,6 +200,14 @@ baseline vs with-skill. **The builder judges.**
    There is no later migration step.
 
 ## Gotchas
+
+- **No sub-agent tool? Use a fresh headless session.** Step 2's no-skill baseline, Step 5's audit
+  and efficiency pass, and Step 6's with-skill run each need a session that has not seen this
+  conversation. Where the harness cannot spawn sub-agents, start one from an empty folder, granting
+  only the folders and tools the step needs — a bare `claude -p "…"` is denied file reads:
+  `claude -p --add-dir <skill-folder> --add-dir <factory-skills-folder> --allowedTools "Read" "Grep" "Glob" "Bash(python3:*)" -- "<the instruction>"`.
+  Doing the independent audit yourself defeats it; say so if neither route is available. Found by
+  the first cold build run, which had no Agent tool and improvised this.
 
 - **Hot-load is not guaranteed.** A skill folder created mid-session may not appear in the
   `/` menu; always run the with-skill test by explicit invocation (name it or point the

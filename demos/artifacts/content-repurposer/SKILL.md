@@ -1,6 +1,6 @@
 ---
 name: content-repurposer
-description: Repurpose a webinar, podcast, talk, or transcript into a tweet thread, LinkedIn post, and newsletter draft. Use when converting a recording into social content. Triggers on: repurpose this webinar/podcast/talk/transcript into posts, turn this transcript into a tweet thread / LinkedIn post / newsletter, make social content from this recording.
+description: "Repurposes a webinar, podcast, talk, or transcript into a tweet thread, LinkedIn post, and newsletter draft. Use when converting a recording into social content. Triggers on: repurpose this webinar/podcast/talk/transcript into posts, turn this transcript into a tweet thread / LinkedIn post / newsletter, make social content from this recording."
 ---
 
 # Content Repurposer — Transcript to Multi-Platform Content
@@ -34,8 +34,8 @@ Produce the three formats **sequentially** — this is the portable default and 
 
 Feed each format the same Step 1 material — core thesis, key insights, best quotes, narrative arc — then write to that format's template and rules.
 
-### Step 3: Present Output
-Show all three pieces in-chat with clear headers. Then offer to save them to files the user names (default `repurposed_content/{date}_{format}.md` relative to the working directory) — do not write files unprompted.
+### Step 3: Check, Then Present
+Before showing them, check each piece against its limits — every tweet ≤280 characters, LinkedIn 150-300 words, newsletter 500-800 words, no hashtags or "1/" in the thread, no sentence repeated verbatim across formats. Fix what fails and check again. Then show all three pieces in-chat with clear headers. Then offer to save them to files the user names (default `repurposed_content/{date}_{format}.md` relative to the working directory) — do not write files unprompted.
 
 ## Voice & Tone
 - **Register**: Smart-casual. Like explaining something interesting to a friend who's also sharp.
@@ -71,9 +71,8 @@ See [templates.md](templates.md) for detailed templates and [examples/podcast_ex
 - Conversational but slightly more polished than tweets
 
 ## Edge Cases
-- **Transcript too short (< 500 words)**: Produce tweet thread + LinkedIn only. Skip newsletter, note why.
 - **Multiple distinct topics**: Ask user which to focus on, or pick the most compelling one.
-- **Transcript is an interview**: Attribute quotes properly. Use "According to [Guest]..." in newsletter.
+- **Transcript is an interview**: If the author is the guest, write in their first person (as in the worked example); otherwise attribute quotes — "According to [Guest]..." in the newsletter.
 - **No clear thesis**: Flag this to the user. Still produce content but note it may need a stronger angle.
 - **Non-English transcript**: Produce content in the same language as the transcript.
 

@@ -1,5 +1,16 @@
 # Worked Example — Podcast Transcript to Content
 
+## Contents
+- Source Transcript (excerpt)
+- Extracted Material
+- Output: Tweet Thread
+- Output: LinkedIn Post
+- Output: Newsletter Draft
+  - The volume trap
+  - What we did instead
+  - It's actually less work
+  - The takeaway
+
 ## Source Transcript (excerpt)
 
 > **Host**: So you're saying most agencies are doing outbound completely wrong?
@@ -70,7 +81,7 @@ Ours: "Saw your episode on [Podcast Name] — your point about X was spot on. We
 
 Everyone thinks personalization at scale is impossible. It's not.
 
-Icebreaker research takes about 30 seconds per lead with the right stack. That's 3.3 hours for 400 leads.
+Icebreaker research takes about 30 seconds per lead with the right stack.
 
 Compare that to the hours you spend warming domains, managing bounces, and fighting spam filters at 10,000 volume.
 
@@ -121,6 +132,8 @@ What's your current reply rate on cold outbound? Curious how this compares to wh
 ---
 
 ## Output: Newsletter Draft
+
+(Shortened for this example; a full draft runs 500-800 words.)
 
 Subject: We cut our cold email volume by 96%
 Preview: And somehow booked more meetings than ever.

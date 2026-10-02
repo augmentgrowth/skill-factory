@@ -12,3 +12,7 @@ One line per change, newest last. Format: `[YYYY-MM-DD] What changed and why`.
 - [2026-10-02] Routes 'nothing failed, is it up to date?' to audit-skill; Gotchas entries from an anneal stay narrow to the failing case (no universal rules from one example).
 - [2026-10-02] Audit: every save is now committed path-scoped (`commit -- <path>`) so work staged elsewhere cannot ride along, and publishing has an exact command (D1); copyable progress checklist (E1); description boundary names audit-skill (A3); caps removed from non-dangerous lines (G2); target-models recorded (G1); stranded gotcha sentence moved, "Audit vocabulary" renamed "Builder vocabulary", "private hub" defined (J2, B2).
 - [2026-10-02] Evaluator round 1: the private-hub pointer names where the skill-home README lives under a plugin install.
+- [2026-10-02] Lock protocol, queue draining and static-proposal placement moved verbatim into references/ (linked from where each is needed) so the anneal steps fit the ~5k tokens that survive a long session; all three saved cases re-judged green against the moved text.
+- [2026-10-02] Step 6 runs the factory lint on the patched skill before the green commit; a fix that adds a new fix-level finding (e.g. YAML the loader rejects) is not green.
+- [2026-10-02] Step 6 lint path carries the no-substitution fallback and compares against a lint run made before the first attempt.
+- [2026-10-02] Step 5 opens with the before-fix lint run that Step 6 compares against; a lint-driven correction counts as an attempt, keeping the loop bounded at 3.

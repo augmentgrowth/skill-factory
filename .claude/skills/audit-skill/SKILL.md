@@ -64,8 +64,13 @@ it catches frontmatter the loader rejects.
 
 Read each skill's `SKILL.md`, every file it references, and its scripts — the whole of each, not
 excerpts. Then give every rubric rule one verdict: pass, fix, or n.a., per "How to judge a rule"
-in the rubric. Mechanical rules start from the lint finding; judgment rules (A3, B1–B6, D1, E1,
-F1, G2–G5, H3, I1, J2) need the reading.
+in the rubric. Mechanical rules start from the lint finding; judgment rules (A3, B1–B7, D1–D2, E1,
+F1, G2–G5, H3, H5, I1, J2) need the reading. Where the skill ships scripts, run them
+rather than trusting them: on its saved inputs, and — for any checker — on one deliberately bad
+output you write, to see it fail (F1). Work in a scratch folder; never write into the skill. Run
+only scripts that read local input and print output: never one that sends, posts, deletes, spends,
+or calls a network API — use its `--dry-run` if it has one, otherwise judge it by reading — and
+never a vendored skill's scripts.
 
 For more than three skills, hand each skill to its own sub-agent so the reading stays out of your
 context: give it the skill's path, the rubric's path, and that skill's lint output, and ask for the

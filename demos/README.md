@@ -28,10 +28,13 @@ had no way to know.
 ## Auditing demo 2
 
 `artifacts/weekly-metrics-update/` holds the run's real output so the claims are checkable
-rather than takeable on faith:
+rather than takeable on faith. The cases and git history are untouched; the skill itself got
+post-run fixes on 2026-10-02 (its frontmatter now parses, and a pre-handover check was added) —
+see its `CHANGELOG.md`. Its "Good" example quotes its own fixture's numbers, which today's rubric
+(K1) would flag; it is kept as the record of what this run produced:
 
 ```
-SKILL.md                          the skill that got built (175 lines)
+SKILL.md                          the skill that got built (182 lines; 175 as built)
 CHANGELOG.md                      line one, written at birth
 cases/baseline/input.md           the frozen sample export
 cases/baseline/output-baseline.md the no-skill output — captured before drafting
@@ -40,7 +43,7 @@ git-history.txt                   both commits and the rollback tag
 ```
 
 These artifacts are deliberately **not** in `.claude/skills/`. Everything there loads into
-every builder's context, and the factory keeps that budget tight — four skills, plus
+every builder's context, and the factory keeps that budget tight — five skills, plus
 whatever you build. A demo shouldn't cost you context forever, so it lives here instead,
 where nothing auto-loads it.
 
@@ -48,7 +51,7 @@ where nothing auto-loads it.
 
 `artifacts/fable-codex-factory-run/` holds the frozen task and the full with-skill audit trail.
 The built skill graduated to its owner's private build home; `skill/` in this folder is a frozen
-snapshot of the SKILL.md, changelog, and cases as they stood at the stress test.
+snapshot of the SKILL.md, changelog, and cases as they stood at the stress test. (One post-run edit, 2026-10-02: its frontmatter description was quote-wrapped, wording unchanged, so it parses as YAML.)
 
 ```
 task.md                 the frozen pm-agent task
