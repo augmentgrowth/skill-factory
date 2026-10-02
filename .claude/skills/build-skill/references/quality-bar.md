@@ -11,7 +11,7 @@ prompting pages, and OpenAI's Codex skill-creator. This file adds only what the 
 process requires on top of it.
 
 - [ ] **Lint is clean of `fix` findings.** Run
-      `python3 ../audit-skill/scripts/lint_skills.py <skill-folder>` (stdlib only, no install) and
+      `python3 "${CLAUDE_SKILL_DIR}/../audit-skill/scripts/lint_skills.py" <skill-folder>` (stdlib only, no install) and
       resolve every `fix`; judge every `check`. It covers the mechanical rubric rules: name and
       description limits, size, nested or orphaned references, Contents lists on long references,
       shouty language, undeclared script dependencies.

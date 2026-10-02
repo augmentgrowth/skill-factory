@@ -128,7 +128,7 @@ or logging any value**. Never commit, print, or repeat a secret. The `.env` is g
 
 ## Step 5 — Self-critique
 
-First run the lint — `python3 ../audit-skill/scripts/lint_skills.py <skill-folder>`
+First run the lint — `python3 "${CLAUDE_SKILL_DIR}/../audit-skill/scripts/lint_skills.py" <skill-folder>`
 (stdlib only, no install; the path is relative to this skill's folder) — and resolve
 every `fix` finding before anything else; it catches the mechanical misses (limits,
 nesting, missing Contents lists, undeclared dependencies) so your own pass can spend
@@ -158,7 +158,12 @@ baseline vs with-skill. **The builder judges.**
 
 ## Step 7 — Done + personal install
 
-1. Save the finished skill plus changelog line one, scoped to the folder:
+1. **In a factory clone, settle publishability first.** Its release gate refuses to publish a
+   new skill whose frontmatter lacks `public_safe: true`. Ask the builder once, plainly: "Is this
+   skill safe for anyone to see — no client names, private data, or internal detail?" On a yes,
+   add `public_safe: true` to the frontmatter; on a no, leave it out and say the skill will stay
+   on this machine (or in their private repo). Skip this outside a factory clone.
+2. Save the finished skill plus changelog line one, scoped to the folder:
    `git -C <repo> add .claude/skills/<name>`
    `git -C <repo> commit -m "<name>: finished skill" -- .claude/skills/<name>`
    `git -C <repo> tag <name>/known-good-1`
@@ -166,11 +171,11 @@ baseline vs with-skill. **The builder judges.**
    If the push is refused (a factory clone's gate refuses a new skill without
    `public_safe: true`), say once, plainly, that the skill is saved on this machine only.
    Degraded mode: skip all of this with the notice.
-2. **Offer the personal install.** Copy the skill folder — including `cases/`,
+3. **Offer the personal install.** Copy the skill folder — including `cases/`,
    `CHANGELOG.md`, and `.env.example` if present, but **NEVER** the real `.env` — to the
    harness's personal skills directory (Claude Code: `~/.claude/skills/<name>/`; other
    harnesses per the spec's Harness notes matrix in `CLAUDE.md`).
-3. Tell the builder the **build home remains the skill's system of record** — that's
+4. Tell the builder the **build home remains the skill's system of record** — that's
    where its history lives and where to come back to improve it (via `improve-skill`).
    There is no later migration step.
 
