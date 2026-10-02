@@ -101,6 +101,34 @@ class LintTest(unittest.TestCase):
         self.assertNotIn("A1", {f.rule for f in rep.findings})
         self.assertGreater(rep.facts["description_chars"], 20)
 
+    def test_unknown_top_level_key_is_flagged(self):
+        body = GOOD.format(name="weekly-update").replace("---\n\n#", "static: true\n---\n\n#", 1)
+        rep = lint_skills.lint(self.skill(body=body))
+        self.assertTrue(any(f.rule == "A4" and "static" in f.message for f in rep.findings))
+
+    def test_claude_code_keys_are_facts_not_findings(self):
+        body = GOOD.format(name="weekly-update").replace("---\n\n#", "context: fork\n---\n\n#", 1)
+        rep = lint_skills.lint(self.skill(body=body))
+        self.assertNotIn("A4", {f.rule for f in rep.findings})
+        self.assertEqual(rep.facts["claude_code_only_keys"], ["context"])
+
+    def test_model_key_is_flagged_as_runtime_switch(self):
+        body = GOOD.format(name="weekly-update").replace("---\n\n#", "model: opus\n---\n\n#", 1)
+        rep = lint_skills.lint(self.skill(body=body))
+        self.assertTrue(any(f.rule == "A4" and "switches the model" in f.message for f in rep.findings))
+
+    def test_target_models_in_metadata(self):
+        body = GOOD.format(name="weekly-update").replace(
+            "---\n\n#", 'metadata:\n  target-models: "claude-opus-5-5"\n  static: "true"\n---\n\n#', 1)
+        rep = lint_skills.lint(self.skill(body=body))
+        rules = {f.rule for f in rep.findings}
+        self.assertNotIn("G1", rules)
+        self.assertNotIn("A4", rules)
+        self.assertEqual(rep.facts["target_models"], "claude-opus-5-5")
+
+    def test_missing_target_models(self):
+        self.assertIn("G1", self.rules(self.skill(), "check"))
+
     # --- structure ---------------------------------------------------------
 
     def test_long_skill_md(self):

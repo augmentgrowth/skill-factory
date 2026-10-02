@@ -52,6 +52,13 @@ PY_IMPORT_RE = re.compile(r"^\s*(?:import\s+([\w.]+)|from\s+([\w.]+)\s+import)",
 JS_IMPORT_RE = re.compile(r"""(?:require\(\s*['"]([^'"./][^'"]*)['"]\s*\)|from\s+['"]([^'"./][^'"]*)['"])""")
 NODE_BUILTINS = {"fs", "path", "os", "child_process", "url", "util", "crypto", "http", "https",
                  "stream", "events", "readline", "process", "assert", "zlib", "buffer", "net"}
+SPEC_KEYS = {"name", "description", "license", "compatibility", "metadata", "allowed-tools"}
+# Claude Code reads these; strict validators (claude.ai upload, Skills API, OpenAI quick_validate)
+# reject them. Fine for a Claude-Code-only skill, so they are reported as facts, not findings.
+CLAUDE_CODE_KEYS = {"when_to_use", "argument-hint", "arguments", "disable-model-invocation",
+                    "user-invocable", "disallowed-tools", "model", "effort", "context", "agent",
+                    "background", "hooks", "paths", "shell"}
+TARGET_MODEL_KEYS = ("target-models", "target_models")
 SKIP_DIRS = {"cases", "evals", ".git", "node_modules", "__pycache__", ".venv", "venv"}
 NON_REFERENCE_FILES = {"SKILL.md", "CHANGELOG.md", "README.md", "LICENSE.md", "LICENSE.txt"}
 
@@ -128,7 +135,11 @@ def strip_inline_code(text: str) -> str:
 
 
 def split_frontmatter(lines: list[str]) -> tuple[dict[str, str], int, str | None]:
-    """Flat key: value reader. Returns (fields, body_start_index, error)."""
+    """Flat key: value reader, plus one nested level under `metadata:`.
+
+    Returns (fields, body_start_index, error). Folded/indented continuation lines are
+    joined onto their key; `metadata` sub-keys land in fields as "metadata.<key>".
+    """
     if not lines or lines[0].strip() != "---":
         return {}, 0, "SKILL.md does not open with a --- frontmatter line"
     fields: dict[str, str] = {}
@@ -137,6 +148,11 @@ def split_frontmatter(lines: list[str]) -> tuple[dict[str, str], int, str | None
         if line.strip() == "---":
             return fields, i + 1, None
         if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        if line[:1].isspace() and key == "metadata":
+            k, sep, v = line.strip().partition(":")
+            if sep:
+                fields[f"metadata.{k.strip()}"] = v.strip().strip("'\"")
             continue
         if line[:1].isspace() and key:
             fields[key] = (fields[key] + " " + line.strip()).strip()
@@ -189,9 +205,30 @@ def check_frontmatter(rep: SkillReport, skill_md: Path, lines: list[str], folder
         rep.add("A3", "fix", skill_md, 1, "description is not in third person (starts with I/you/we)")
     if not re.search(r"\b(use (it |this )?(when|for|whenever)|triggers? on|fires (on|when)|when (the user|someone|a user|you))", desc, re.IGNORECASE):
         rep.add("A3", "check", skill_md, 1, "description has no explicit when-to-use clause ('Use when…')")
-    model_key = next((k for k in ("tested-with", "tested_with", "models") if k in fields), None)
-    rep.facts["target_model_declared"] = bool(model_key) or "metadata" in fields
+    top = {k for k in fields if not k.startswith("metadata.")}
+    unknown = sorted(top - SPEC_KEYS - CLAUDE_CODE_KEYS)
+    rep.facts["claude_code_only_keys"] = sorted(top & CLAUDE_CODE_KEYS)
+    for k in unknown:
+        rep.add("A4", "check", skill_md, frontmatter_line(lines, k),
+                f"frontmatter key {k!r} is outside the spec: ignored by Claude Code and Codex, rejected by "
+                "claude.ai upload, the Skills API and OpenAI's validator; move it under metadata as a string")
+    if "model" in top:
+        rep.add("A4", "check", skill_md, frontmatter_line(lines, "model"),
+                "`model:` switches the model in Claude Code; if it only documents the target, use metadata target-models")
+    declared = next((fields[f"metadata.{k}"] for k in TARGET_MODEL_KEYS if f"metadata.{k}" in fields), "")
+    rep.facts["target_models"] = declared
+    if not declared:
+        rep.add("G1", "check", skill_md, 1, "no metadata target-models naming the model(s) this skill is written for")
     return body_start
+
+
+def frontmatter_line(lines: list[str], key: str) -> int:
+    for i, line in enumerate(lines[1:], start=2):
+        if line.strip() == "---":
+            break
+        if line.startswith(f"{key}:"):
+            return i
+    return 1
 
 
 def check_size(rep: SkillReport, skill_md: Path, lines: list[str]) -> None:
