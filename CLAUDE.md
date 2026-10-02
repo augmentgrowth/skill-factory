@@ -87,7 +87,7 @@ current-model pages. Refresh the rubric — not this list — when they update.
   steer the skill; no download is piped straight into a shell; any step that sends data out names
   what leaves and where.
 - **Settings, secrets and stored data each have a known home.** Per-user setup in a `config.json` in the
-  skill folder, asked for on first run; secrets per the credential rule below; data that accumulates
+  skill folder (gitignored when personal), asked for on first run; secrets per the credential rule below; data that accumulates
   across runs outside the folder (`${CLAUDE_PLUGIN_DATA}` for plugin skills), because an update or
   reinstall can replace the folder.
 

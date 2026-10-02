@@ -36,8 +36,8 @@ write out its reasoning; ask for a short explanation instead. Never add a generi
 "double-check your work" — use a concrete check (see the validation slot below).
 
 SETTINGS AND DATA (apply whether or not the skill has scripts): per-user setup
-(account id, channel) goes in a config.json in this folder, asked for on first
-run; secrets in .env per the credential rule; data that accumulates across runs
+(account id, channel) goes in a config.json in this folder (gitignored when
+personal), asked for on first run; secrets in .env per the credential rule; data that accumulates across runs
 outside this folder (${CLAUDE_PLUGIN_DATA} for plugin skills) — an update can
 replace the folder. Never hard-code any of it in a script.
 

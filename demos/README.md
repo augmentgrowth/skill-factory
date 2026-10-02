@@ -30,10 +30,11 @@ had no way to know.
 `artifacts/weekly-metrics-update/` holds the run's real output so the claims are checkable
 rather than takeable on faith. The cases and git history are untouched; the skill itself got
 post-run fixes on 2026-10-02 (its frontmatter now parses, and a pre-handover check was added) —
-see its `CHANGELOG.md`:
+see its `CHANGELOG.md`. Its "Good" example quotes its own fixture's numbers, which today's rubric
+(K1) would flag; it is kept as the record of what this run produced:
 
 ```
-SKILL.md                          the skill that got built (181 lines; 175 as built)
+SKILL.md                          the skill that got built (182 lines; 175 as built)
 CHANGELOG.md                      line one, written at birth
 cases/baseline/input.md           the frozen sample export
 cases/baseline/output-baseline.md the no-skill output — captured before drafting
