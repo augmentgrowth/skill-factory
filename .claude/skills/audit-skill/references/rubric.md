@@ -13,7 +13,7 @@ against (audit-skill). Rule IDs are stable: `scripts/lint_skills.py` tags its fi
 - E. Ordered workflows (E1)
 - F. Feedback loops (F1)
 - G. Model calibration (G1–G5)
-- H. Scripts, dependencies and state (H1–H5)
+- H. Scripts, dependencies and stored data (H1–H5)
 - I. Examples and templates (I1)
 - J. Gotchas (J1–J2)
 - K. Evaluation (K1)
@@ -150,6 +150,11 @@ the concrete check — a validator script, a rubric, a reference file, the sourc
 check again, proceeding only when it passes. A generic "double-check your work" is *not* this and is
 a fix to remove: current Opus models already self-verify and over-verify when told to.
 
+The check has to be able to fail. A validator is only evidence once it has been run against a
+deliberately bad output (the no-skill baseline is a ready one, plus a draft that breaks each rule
+it claims to enforce) and caught it. A checker that passes everything — or checks format while the
+skill's core rule goes unchecked — is a fix, however good it looks on the page.
+
 ## G. Model calibration
 
 **G1 Target models recorded.** `metadata` carries `target-models: "<model ids>"` naming the models
@@ -173,7 +178,7 @@ plausibly skip — a check, a file it must read, a script it must run — is exp
 scope is stated outright (newer Sonnet models follow instructions literally). n.a. when the skill
 targets only the largest models.
 
-## H. Scripts, dependencies and state
+## H. Scripts, dependencies and stored data
 
 **H1 Install line next to use.** Every third-party package has its install command and its import
 or invocation together where the skill first uses it (`pip install pypdf`, then
@@ -189,12 +194,14 @@ diagnostics to stderr, and keep output bounded. Consequential scripts offer a dr
 **H4 MCP tools fully qualified.** Name tools as `Server:tool_name`, not a bare tool name that may
 collide.
 
-**H5 State and settings live outside the skill folder.** A skill that remembers things between
-runs (logs, caches, past outputs) or needs per-user settings (an account id, a channel name) keeps
-them somewhere stable and says where — a `config.json` it asks the builder to fill on first run, or
-a data directory such as Claude Code's `${CLAUDE_PLUGIN_DATA}` for plugin skills — never hard-coded
-in a script, and never written into the skill folder, which an update or reinstall can replace.
-n.a. for skills with no state or settings.
+**H5 Settings, secrets and accumulated data each have a known home.** Per-user setup (an account
+id, a channel name) lives in a `config.json` in the skill folder that the skill asks the builder to
+fill on first run — gitignored when it is personal — never hard-coded in a script. Secrets follow the
+credential rule: `.env` in the skill folder, gitignored, recreated from `.env.example`. Data that
+accumulates across runs (logs, history, caches) goes somewhere that survives an update or
+reinstall, because the skill folder may be replaced: `${CLAUDE_PLUGIN_DATA}` for plugin skills
+(substituted only there), or a path outside the folder the skill names for project skills. n.a.
+for skills with no settings or stored data.
 
 ## I. Examples and templates
 
@@ -215,6 +222,11 @@ strict ("use exactly this structure") or a default ("adapt as needed").
 and its expected output or rubric, ideally three scenarios including one that should *not* trigger.
 Without it, no change can be proven to keep the skill working. Fix: capture one representative input
 now (the audit can draft it; the builder confirms it).
+
+A case only proves something if the skill doesn't contain its answers. When the skill's rules or
+examples quote the case's specific figures, names or outputs, the replay measures recall, not the
+skill: fix by moving the skill's examples to different numbers, or by adding a second case the
+skill has never seen.
 
 ## L. Factory extras
 

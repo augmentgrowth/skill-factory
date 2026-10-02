@@ -41,7 +41,10 @@ SHOUTY_LIMIT = 5  # occurrences per file before it reads as shouting
 LINK_RE = re.compile(r"\[[^\]]*\]\(([^)\s]+)\)")
 BACKTICK_PATH_RE = re.compile(r"`((?:\.{1,2}/)?(?:[\w.-]+/)*[\w.-]+\.(?:md|py|sh|js|ts|json|yaml|yml|txt))`")
 BACKSLASH_PATH_RE = re.compile(r"\b[\w.-]+\\[\w.-]+\\?[\w.-]*\.(?:py|md|sh|js|ts|json|txt)\b")
-PIPE_TO_SHELL_RE = re.compile(r"\b(curl|wget)\b[^|\n]*\|\s*(sudo\s+)?(ba|z)?sh\b")
+PIPE_TO_SHELL_RE = re.compile(
+    r"\b(curl|wget)\b[^|\n]*\|\s*(sudo\s+)?((ba|z)?sh|python3?|node|perl|ruby)\b"
+    r"|\b((ba|z)?sh|source)\s+<\(\s*(curl|wget)\b")
+NEGATED_RE = re.compile(r"\b(never|don't|do not|avoid|no)\b", re.IGNORECASE)
 TIME_BOMB_RE = re.compile(
     r"\b(before|after|until|as of)\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+20\d\d\b",
     re.IGNORECASE,
@@ -108,6 +111,8 @@ def discover(paths: list[str]) -> list[Path]:
     found: list[Path] = []
     for raw in paths:
         p = Path(raw).expanduser()
+        if p.name in ("", ".", ".."):
+            p = p.resolve()
         if not p.exists():
             raise SystemExit(f"lint_skills: no such path: {raw}")
         if (p / "SKILL.md").is_file():
@@ -449,17 +454,20 @@ def check_language(rep: SkillReport, skill_dir: Path) -> None:
 def check_untrusted(rep: SkillReport, skill_dir: Path) -> None:
     """D2: downloaded code piped straight into a shell, anywhere in the skill (code blocks included)."""
     for f in sorted(skill_dir.rglob("*")):
-        if not f.is_file() or f.suffix not in (".md", ".sh", ".py", ".js", ".mjs", ".ts", ""):
-            continue
+        if not f.is_file() or f.suffix not in (".md", ".sh", ".py", ".js", ".mjs", ".ts"):
+            continue  # never .env or other extensionless files: they may hold secrets
         if set(f.relative_to(skill_dir).parts[:-1]) & SKIP_DIRS:
             continue
         try:
             lines = read_lines(f)
         except OSError:
             continue
+        prose = {n for n, _ in prose_lines(lines)} if f.suffix == ".md" else set()
         for n, line in enumerate(lines, start=1):
             if m := PIPE_TO_SHELL_RE.search(line):
-                rep.add("D2", "fix", f, n, f"{m.group(0)!r} runs downloaded code unseen; download, "
+                # A prose sentence warning against it ("never pipe a download to sh") is a mention.
+                level = "check" if n in prose and NEGATED_RE.search(line) else "fix"
+                rep.add("D2", level, f, n, f"{m.group(0)!r} runs downloaded code unseen; download, "
                         "check, then run — or vendor the script into the skill")
 
 
