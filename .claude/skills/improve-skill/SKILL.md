@@ -170,7 +170,9 @@ this commit.
 
 Then run the factory lint on the patched skill
 (`python3 "${CLAUDE_SKILL_DIR}/../audit-skill/scripts/lint_skills.py" <skill-folder>`; stdlib
-only). A fix that adds a new `fix` finding — most often a frontmatter edit YAML now rejects, which
+only; `${CLAUDE_SKILL_DIR}` is this skill's folder — where it isn't substituted, use the folder
+this SKILL.md lives in) and compare with the run you made before the first attempt (run it once
+then, at the start of Step 5). A fix that adds a new `fix` finding — most often a frontmatter edit YAML now rejects, which
 silently stops the skill loading — is not green: correct it and replay again.
 
 Stage the skill folder **by explicit path** (`git -C <repo> add <skill-folder>`) and make a single
