@@ -25,7 +25,8 @@ HOW TO USE THIS TEMPLATE
 The frontmatter block above stays the first thing in the file — harnesses parse
 it only at the top. Fill every [bracketed] slot, then delete the guidance
 comments. The full checklist this draft is judged against is the factory rubric:
-.claude/skills/audit-skill/references/rubric.md.
+audit-skill's references/rubric.md (in a factory clone, .claude/skills/audit-skill/; under a
+plugin install, the plugin's skills/audit-skill/).
 
 WRITE FOR CURRENT MODELS. Plain imperatives plus the reason ("Use the ledger
 total, because the export double-counts refunds"). Not shouting: all-caps

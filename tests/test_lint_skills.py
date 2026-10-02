@@ -10,6 +10,7 @@ linter that cries wolf trains the auditor to ignore it.
 from __future__ import annotations
 
 import contextlib
+import io
 import importlib.util
 import os
 import sys
@@ -291,6 +292,15 @@ class LintTest(unittest.TestCase):
         write(self.root / "repo/plugins/ads/skills/report/cases/x/SKILL.md", GOOD.format(name="x"))
         names = [p.name for p in lint_skills.discover([str(self.root / "repo")])]
         self.assertEqual(names, ["report"])
+
+    def test_unscanned_nested_skills_are_reported(self):
+        write(self.root / "repo/.claude/skills/one/SKILL.md", GOOD.format(name="one"))
+        write(self.root / "repo/plugins/ads/skills/report/SKILL.md", GOOD.format(name="report"))
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            names = [p.name for p in lint_skills.discover([str(self.root / "repo")])]
+        self.assertEqual(names, ["one"])
+        self.assertIn("1 other SKILL.md", err.getvalue())
 
     def test_cli_exits_zero_with_findings(self):
         d = self.skill(name="Bad_Name")

@@ -121,7 +121,7 @@ git-tracked history from birth.
   and must not be papered over:** a clone that nobody ever drives through the factory stays
   unguarded, which is why `README.md` states the install as a plain command for anyone who pushes
   by hand. Every skill that pushes runs this preflight — `build-skill`, `improve-skill`,
-  `graduate-skill`, `learn-from-session` — because the gap belongs to whichever one touches git
+  `graduate-skill`, `learn-from-session`, `audit-skill` — because the gap belongs to whichever one touches git
   first, not to the one that happens to be documented.
 - **Never rewrite history.** Rollback is a path-scoped restore committed as a *new* commit. Repo
   HEAD never moves, and no published commit is ever amended, rebased, or force-pushed.
