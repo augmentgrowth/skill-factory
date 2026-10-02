@@ -1,0 +1,211 @@
+"""Tests for the audit skill's mechanical linter.
+
+Run:  python3 -m unittest tests/test_lint_skills.py
+
+Each test builds a throwaway skill and asserts the rule the linter should (or
+should not) report. The false-positive tests matter as much as the hits: a
+linter that cries wolf trains the auditor to ignore it.
+"""
+
+from __future__ import annotations
+
+import contextlib
+import importlib.util
+import os
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+LINTER = Path(__file__).resolve().parent.parent / ".claude/skills/audit-skill/scripts/lint_skills.py"
+spec = importlib.util.spec_from_file_location("lint_skills", LINTER)
+lint_skills = importlib.util.module_from_spec(spec)
+sys.modules["lint_skills"] = lint_skills
+spec.loader.exec_module(lint_skills)
+
+GOOD = """---
+name: {name}
+description: Turns a weekly export into the leadership update. Use when writing the weekly
+  update from a channel export. Triggers on weekly update, exec update.
+---
+
+# Weekly update
+
+Read [the format](references/format.md) before drafting.
+
+## Gotchas
+
+- Exports double-count refunds.
+"""
+
+
+def write(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+
+
+class LintTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def skill(self, name="weekly-update", body=None, refs=None):
+        d = self.root / name
+        write(d / "SKILL.md", body if body is not None else GOOD.format(name=name))
+        for rel, text in (refs or {"references/format.md": "# Format\n\nShort.\n"}).items():
+            write(d / rel, text)
+        return d
+
+    def rules(self, d, level=None):
+        rep = lint_skills.lint(d)
+        return {f.rule for f in rep.findings if level is None or f.level == level}
+
+    # --- clean baseline ---------------------------------------------------
+
+    def test_good_skill_has_no_fixes(self):
+        self.assertEqual(self.rules(self.skill(), "fix"), set())
+
+    # --- frontmatter -------------------------------------------------------
+
+    def test_name_rules(self):
+        d = self.skill(name="Weekly_Update")
+        self.assertIn("A1", self.rules(d, "fix"))
+        d = self.skill(name="claude-helper")
+        self.assertIn("A1", self.rules(d, "fix"))
+
+    def test_name_must_match_folder(self):
+        d = self.skill(body=GOOD.format(name="other-name"))
+        msgs = [f.message for f in lint_skills.lint(d).findings]
+        self.assertTrue(any("does not match its folder" in m for m in msgs))
+
+    def test_missing_frontmatter(self):
+        d = self.skill(body="# No frontmatter\n\n## Gotchas\n")
+        self.assertIn("A1", self.rules(d, "fix"))
+
+    def test_long_description(self):
+        body = GOOD.format(name="weekly-update").replace(
+            "Triggers on weekly update", "Triggers on " + "x " * 600)
+        self.assertIn("A2", self.rules(self.skill(body=body), "fix"))
+
+    def test_first_person_description(self):
+        body = GOOD.format(name="weekly-update").replace("Turns a weekly", "I can turn a weekly")
+        self.assertIn("A3", self.rules(self.skill(body=body), "fix"))
+
+    def test_folded_description_is_read(self):
+        body = ("---\nname: weekly-update\ndescription: >-\n  Turns exports into updates. Use when\n"
+                "  writing the weekly update.\n---\n\n## Gotchas\n")
+        rep = lint_skills.lint(self.skill(body=body, refs={}))
+        self.assertNotIn("A1", {f.rule for f in rep.findings})
+        self.assertGreater(rep.facts["description_chars"], 20)
+
+    # --- structure ---------------------------------------------------------
+
+    def test_long_skill_md(self):
+        body = GOOD.format(name="weekly-update") + "line\n" * 520
+        self.assertIn("C1", self.rules(self.skill(body=body), "fix"))
+
+    def test_nested_reference(self):
+        d = self.skill(refs={
+            "references/format.md": "# Format\n\nSee [deep](deep.md).\n",
+            "references/deep.md": "# Deep\n",
+        })
+        self.assertIn("C2", self.rules(d, "fix"))
+
+    def test_orphan_reference(self):
+        d = self.skill(refs={"references/format.md": "# F\n", "references/lost.md": "# Lost\n"})
+        self.assertIn("C3", self.rules(d))
+
+    def test_long_reference_needs_contents(self):
+        long_ref = "# Format\n\n" + "".join(f"## Part {i}\n\ntext\n\n" for i in range(40))
+        d = self.skill(refs={"references/format.md": long_ref})
+        self.assertIn("C4", self.rules(d, "fix"))
+
+    def test_long_reference_with_matching_contents_passes(self):
+        toc = "# Format\n\n## Contents\n\n" + "".join(f"- Part {i}\n" for i in range(40)) + "\n"
+        long_ref = toc + "".join(f"## Part {i}\n\ntext\n\n" for i in range(40))
+        d = self.skill(refs={"references/format.md": long_ref})
+        self.assertNotIn("C4", self.rules(d))
+
+    def test_contents_missing_a_heading_is_flagged(self):
+        toc = "# Format\n\n## Contents\n\n" + "".join(f"- Part {i}\n" for i in range(39)) + "\n"
+        long_ref = toc + "".join(f"## Part {i}\n\ntext\n\n" for i in range(40))
+        d = self.skill(refs={"references/format.md": long_ref})
+        self.assertIn("C4", self.rules(d, "check"))
+
+    def test_backslash_path(self):
+        body = GOOD.format(name="weekly-update") + "\nRun scripts\\build.py first.\n"
+        self.assertIn("C5", self.rules(self.skill(body=body), "fix"))
+
+    def test_broken_skill_relative_link(self):
+        body = GOOD.format(name="weekly-update") + "\nSee [gone](references/gone.md).\n"
+        self.assertIn("C6", self.rules(self.skill(body=body)))
+
+    def test_bare_repo_filename_is_not_a_broken_link(self):
+        body = GOOD.format(name="weekly-update") + "\nRead `CLAUDE.md` for the contract.\n"
+        self.assertNotIn("C6", self.rules(self.skill(body=body)))
+
+    # --- language ------------------------------------------------------------
+
+    def test_shouty_language(self):
+        body = GOOD.format(name="weekly-update") + "\nYou MUST do it. NEVER skip. ALWAYS check. CRITICAL. IMPORTANT.\n"
+        self.assertIn("G2", self.rules(self.skill(body=body)))
+
+    def test_shouting_inside_code_is_ignored(self):
+        body = GOOD.format(name="weekly-update") + "\n```\nMUST NEVER ALWAYS CRITICAL IMPORTANT\n```\n"
+        self.assertNotIn("G2", self.rules(self.skill(body=body)))
+
+    def test_acronyms_are_not_shouting(self):
+        body = GOOD.format(name="weekly-update") + "\nUse the API to fetch JSON and CSV via HTTP and SQL.\n"
+        self.assertNotIn("G2", self.rules(self.skill(body=body)))
+
+    def test_time_bomb(self):
+        body = GOOD.format(name="weekly-update") + "\nIf before August 2025, use the old endpoint.\n"
+        self.assertIn("B3", self.rules(self.skill(body=body)))
+
+    def test_missing_gotchas(self):
+        body = GOOD.format(name="weekly-update").split("## Gotchas")[0]
+        self.assertIn("J1", self.rules(self.skill(body=body), "fix"))
+
+    # --- scripts -------------------------------------------------------------
+
+    def test_third_party_import_without_install_line(self):
+        d = self.skill(refs={"references/format.md": "# F\n",
+                             "scripts/pull.py": "import requests\nimport json\n"})
+        self.assertIn("H1", self.rules(d, "fix"))
+
+    def test_install_line_satisfies_dependency_check(self):
+        body = GOOD.format(name="weekly-update") + "\nRun `pip install requests`, then `python scripts/pull.py`.\n"
+        d = self.skill(body=body, refs={"references/format.md": "# F\n",
+                                        "scripts/pull.py": "import requests\n"})
+        self.assertNotIn("H1", self.rules(d))
+
+    def test_stdlib_and_local_imports_are_fine(self):
+        body = GOOD.format(name="weekly-update") + "\nRun `python scripts/pull.py`.\n"
+        d = self.skill(body=body, refs={"references/format.md": "# F\n",
+                                        "scripts/pull.py": "import json, os\nfrom helper import x\n",
+                                        "scripts/helper.py": "x = 1\n"})
+        self.assertNotIn("H1", self.rules(d))
+
+    def test_unmentioned_script(self):
+        d = self.skill(refs={"references/format.md": "# F\n", "scripts/ghost.sh": "echo hi\n"})
+        self.assertIn("H2", self.rules(d))
+
+    # --- discovery ----------------------------------------------------------
+
+    def test_discovers_repo_root_layout(self):
+        write(self.root / "repo/.claude/skills/one/SKILL.md", GOOD.format(name="one"))
+        write(self.root / "repo/.claude/skills/two/SKILL.md", GOOD.format(name="two"))
+        names = sorted(p.name for p in lint_skills.discover([str(self.root / "repo")]))
+        self.assertEqual(names, ["one", "two"])
+
+    def test_cli_exits_zero_with_findings(self):
+        d = self.skill(name="Bad_Name")
+        with open(os.devnull, "w") as sink, contextlib.redirect_stdout(sink):
+            self.assertEqual(lint_skills.main([str(d), "--json"]), 0)
+
+
+if __name__ == "__main__":
+    unittest.main()
