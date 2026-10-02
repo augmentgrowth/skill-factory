@@ -7,14 +7,29 @@ description: >-
   factory agent whenever a factory-built skill errors mid-task. Runs the bounded anneal
   transaction: capture the failing case, fix, replay, one commit — or roll back and escalate.
   Also fires on "drain the anneal queue", "any skills waiting to be fixed", "work through the
-  queued failures". Not for building new skills (build-skill) or graduating them
-  (graduate-skill).
+  queued failures". Not for building new skills (build-skill), graduating them
+  (graduate-skill), or auditing a working skill against best practices (audit-skill).
+metadata:
+  target-models: "claude-opus-5-5"
 ---
 
 You are annealing one failing skill. The whole thing is a bounded transaction: at every exit the
 target skill's folder is either genuinely fixed (one commit) or byte-identical to its last good
 state — never a half-edited middle. Run these steps in order. Stop the instant a stop condition
 fires; do not improvise past it.
+
+Copy this into your response and tick it off:
+
+```
+Anneal progress:
+- [ ] 1. Static? → proposal written, stop
+- [ ] 2. Home resolved, folder clean, failure not environmental
+- [ ] 3. Case saved on its own
+- [ ] 4. Handed off, or continuing as the annealing agent
+- [ ] 5. Replay green — if red, repeat step 5 (max 3 attempts), then go to step 7
+- [ ] 6. One save + .annealed marker
+- [ ] 7. (exhausted/uncertain) Restored, residue removed, marker written, escalated
+```
 
 **Two halves, two owners.** *Capture* (Steps 1-3) belongs to the session that watched the skill
 fail — it is deliberately mechanical, takes no lock, and never blocks the builder's real work.
@@ -29,11 +44,11 @@ only what the builder approves. An audit finding that turns out to be a live fai
 **The skill you are fixing may live nowhere near where you are standing.** Skills are served
 through links, so never assume the current directory is the skill's home — Step 2 resolves it.
 
-**Global rule — no git vocabulary reaches the builder, ever.** Not just in the audit section:
+**Global rule — no git vocabulary reaches the builder, ever.** Not just in the vocabulary section:
 escalations, stop notices, and proposals are all plain language ("I saved the failing example",
 not "I committed the fixture"). Git words are for this file, never for the builder.
 
-## Step 1 — Static check FIRST
+## Step 1 — Static check first
 
 Read the failing skill's `SKILL.md` frontmatter — reading straight through the serving path is
 fine, links read through. If `static: true`, this skill never self-edits: diagnose the failure,
@@ -46,7 +61,7 @@ Where the proposal and case live depends on the tier:
   skill lives under a `vendor/` tree. **A missing `upstream:` key does not disqualify it** — a
   skill adopted in place can be external with no reachable upstream to diff against.
 
-  Write NOTHING into the skill's folder — a case dir there reads as drift from upstream and turns
+  Write nothing into the skill's folder — a case dir there reads as drift from upstream and turns
   the repo's health check red. These skills never enter the anneal queue, so **the proposal file is
   the only record that the failure was ever found**; treat losing it as losing the finding.
 
@@ -59,11 +74,13 @@ Where the proposal and case live depends on the tier:
     silently overwrite the earlier proposal.
   - **Durability:** save it permanently, path-scoped and alone —
     `git -C <repo> add docs/proposals/<YYYY-MM-DD>-<skill>-<slug>.md` then
-    `Proposal for <skill>: <slug> (static — not self-edited)`. A proposal left loose in a busy repo
-    is one cleanup away from gone, and nothing in the queue will notice it is missing.
+    `git -C <repo> commit -m "Proposal for <skill>: <slug> (static — not self-edited)" -- docs/proposals/<YYYY-MM-DD>-<skill>-<slug>.md`.
+    A proposal left loose in a busy repo is one cleanup away from gone, and nothing in the queue
+    will notice it is missing.
   - **When the repo publishes, redirect the save — do not skip it.** A proposal quotes real paths
     and machine detail, so it must never land in a repo that publishes (a public remote, or an
-    auto-sync cron). Write it to the private hub's proposal queue instead, at the same
+    auto-sync cron). Write it to the private hub's (a personal skill-home repo; see
+    `templates/skill-home/README.md`) proposal queue instead, at the same
     `docs/proposals/<YYYY-MM-DD>-<skill>-<slug>.md` path, and tell the builder in plain language
     where it went. Leaving it unsaved was the old remedy and it was wrong: the proposal is the only
     failure record a static skill ever gets, and a loose file is one cleanup away from gone.
@@ -73,8 +90,9 @@ Where the proposal and case live depends on the tier:
     This is the one save in the protocol that happens before any preflight has run.
 - **Personal-tier skill carrying `static: true`:** if a case was already captured — you got here
   from the queue — write the terminal marker from Step 7 and commit it alone
-  (`Mark case terminal for <skill>: <slug> (static — proposal written)`) so the proposal is not
-  re-raised on every sweep.
+  (`git -C <repo> add <skill-folder>/cases/<YYYY-MM-DD>-<slug>` then
+  `git -C <repo> commit -m "Mark case terminal for <skill>: <slug> (static — proposal written)" -- <skill-folder>/cases/<YYYY-MM-DD>-<slug>`)
+  so the proposal is not re-raised on every sweep.
 
 Absent flag = annealing on; continue.
 
@@ -108,16 +126,16 @@ Absent flag = annealing on; continue.
    no report line, no git vocabulary. Full rule: the spec's "Install the hook yourself, in
    preflight."
 4. Classify the failure. **Environmental** — network timeout, rate limit, disk full, transient auth
-   — is NOT a skill bug: log a one-line note ("skipped anneal: rate limit, not a skill defect") and
+   — is not a skill bug: log a one-line note ("skipped anneal: rate limit, not a skill defect") and
    STOP. Only genuine skill bugs (wrong logic, stale endpoint, bad parse, missing step) proceed.
 5. **Neither?** If the failure is unclassifiable — the expectation itself is contradictory,
-   impossible, or disputed — it is still NOT skipped: capture the case (Step 3) with `expected.md`
+   impossible, or disputed — it is still not skipped: capture the case (Step 3) with `expected.md`
    flagged as **disputed** at the top, then go straight to escalation (Step 7, restore not needed —
    you changed nothing). Every non-environmental anneal leaves a case commit, even one you can't fix.
    Likewise, if it is already clear no fix could ever replay green, capture the case and escalate —
    don't burn the 3 attempts for form's sake.
 
-## Step 3 — Capture the failing case BEFORE any fix
+## Step 3 — Capture the failing case before any fix
 
 Serialize the failure so it survives any later rollback. **Capture takes no lock** — it is a
 write to a brand-new directory that nothing else is touching, and it must stay this mechanical so
@@ -128,10 +146,10 @@ any session on any harness can do it reliably:
 3. `expected.md` — observed-vs-expected notes, or a judgment rubric describing what correct output
    looks like. (Comparison is always judgment/rubric-based, never a byte-diff.)
 4. Stage **by explicit path** — `git -C <repo> add <skill-folder>/cases/<YYYY-MM-DD>-<slug>` (that
-   case directory only, never a repo-wide `add`) — and commit it:
-   `Capture failing case for <skill>: <slug>`. **This commit is never reverted** — the fixture is
-   the permanent record even if the fix is thrown away, and it is also the queue entry if no one
-   anneals it today.
+   case directory only, never a repo-wide `add`) — and commit only that directory:
+   `git -C <repo> commit -m "Capture failing case for <skill>: <slug>" -- <skill-folder>/cases/<YYYY-MM-DD>-<slug>`.
+   **This commit is never reverted** — the fixture is the permanent record even if the fix is
+   thrown away, and it is also the queue entry if no one anneals it today.
 
 ## Step 4 — Hand the anneal to a background agent
 
@@ -160,7 +178,7 @@ Repeat up to 3 times:
    Judge the output against `expected.md`.
 3. Green → go to Step 6. Red → increment the attempt count and loop. After the 3rd red → Step 7.
 
-## Step 6 — On green: ONE commit
+## Step 6 — On green: one commit
 
 **If the fix touched a script**, first dispatch a **fresh sub-agent** to run the factory's sibling
 `graduate-skill/references/script-efficiency-review.md` checklist (it lives with the factory skills,
@@ -170,7 +188,7 @@ what this case exercises gets noted for its own case and its own anneal — neve
 this commit.
 
 Stage the skill folder **by explicit path** (`git -C <repo> add <skill-folder>`) and make a single
-commit containing all four:
+commit scoped to it (`git -C <repo> commit -m "<message>" -- <skill-folder>`) containing all four:
 
 - the fix,
 - a new entry under `## Gotchas` in the skill's `SKILL.md` capturing what was learned — narrow to
@@ -217,13 +235,15 @@ the folder:
 2. Write the terminal marker `cases/<YYYY-MM-DD>-<slug>/.annealed` — `<ISO date> escalated: <one
    line on why>` — so the queue does not re-run a case a human now owns.
 3. Commit the restore **plus the marker** as a **new** commit (never rewrite history), path-scoped
-   as always. Name the removed residue in the commit body — a silent deletion is indistinguishable
-   from a bug later. Never restage the Step 3 case commit. Release the lock if you hold one (an
+   as always (`git -C <repo> add <skill-folder>` then
+   `git -C <repo> commit -m "<subject>" -m "<body>" -- <skill-folder>`). Name the removed residue
+   in the commit body — a silent deletion is indistinguishable from a bug later. Never restage the Step 3 case commit. Release the lock if you hold one (an
    escalation straight out of Step 2 never took it).
 4. Escalate in plain language: what failed, what you tried across the attempts, and the options now.
    No git vocabulary reaches the builder. In a background run there is no one to escalate *to*
-   live — leave the plain-language account in the commit body, **push it**, and stop. An escalation
-   nobody can see is not an escalation; pushing is how a background run reaches the builder at all.
+   live — leave the plain-language account in the commit body, **push it**
+   (`git -C <repo> push origin HEAD`), and stop. An escalation nobody can see is not an
+   escalation; pushing is how a background run reaches the builder at all.
 
 ## The lock protocol
 
@@ -283,10 +303,11 @@ anneal queue", or just noticing a backlog.
 - **Escalate** when the fix is uncertain or would reach outside the folder — except in a background
   run, which aborts and requeues instead of asking.
 - **Never rewrite history.** Push per the spec's silent-git contract: when the build home's remote
-  is yours, the anneal commit ships. Rollback stays a path-scoped restore committed as a NEW
-  commit, so pushing can never corrupt the transaction.
+  is yours, the anneal commit ships: `git -C <repo> push origin HEAD` (a gated change adds
+  `refs/tags/<skill>/rollback-<n> refs/tags/<skill>/review-<n>`). Rollback stays a path-scoped
+  restore committed as a NEW commit, so pushing can never corrupt the transaction.
 
-## Audit vocabulary (translate git, never expose it)
+## Builder vocabulary (translate git, never expose it)
 
 The builder speaks plain English, never git. Handle these directly:
 
@@ -320,6 +341,7 @@ skip the git steps with a plain one-line notice, and note the retrofit for when 
 - **Preflight the folder, not the repo.** A whole-repo status check makes every unrelated bit of
   dirty work in a busy repo look like a blocker, and nothing ever anneals.
 - **A background run must never ask a question.** There is no one to answer; the run just hangs.
+  Abort and requeue instead — the queue is the safe default, not a failure.
 - **A static skill's proposal is the whole record — give it an address.** Vendored skills never
   enter the anneal queue, so nothing sweeps for a proposal and nothing notices one missing. "Write
   it somewhere visible" is not an instruction: two agents pick two directories and the second never
@@ -333,6 +355,5 @@ skip the git steps with a plain one-line notice, and note the retrofit for when 
   the lock silently stops excluding anyone and two agents anneal the same skill at once, which is
   the exact thing it exists to prevent. Record the session's durable pid, or `pid: unknown`. Found
   by a drill agent that hit it, noticed, and hand-corrected — the protocol had not said whose pid.
-  Abort and requeue instead — the queue is the safe default, not a failure.
 - **The `.annealed` marker is what ends the loop.** Green or escalated, write it. Without it the
   same case is picked up by every future sweep.
