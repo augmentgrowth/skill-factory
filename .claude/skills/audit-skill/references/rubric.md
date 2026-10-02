@@ -65,8 +65,9 @@ skills are installed, so the first sentence carries the load.
 Judge it by imagining five requests that should trigger and three near-misses that should not.
 
 **A4 Frontmatter is portable.** Claude Code and Codex ignore unknown keys, but claude.ai upload,
-the Skills API, Anthropic's `package_skill` and OpenAI's `quick_validate` *reject* any key outside
-`name`, `description`, `license`, `compatibility`, `metadata`, `allowed-tools`. Fix: move custom
+the Skills API and Anthropic's `package_skill` *reject* any key outside `name`, `description`,
+`license`, `compatibility`, `metadata`, `allowed-tools` — and OpenAI's `quick_validate` is stricter
+still, rejecting `compatibility` too. Fix: move custom
 flags under `metadata` as strings (`metadata:` then `  owner: "growth"`). Exception: the factory's
 own keys (`static`, `tier`, `upstream`, `public_safe`) stay top level, because the factory's tools
 read and rewrite them there; strip or move them only in a copy made for upload. Claude Code's own keys

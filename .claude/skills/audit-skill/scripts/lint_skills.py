@@ -121,6 +121,13 @@ def discover(paths: list[str]) -> list[Path]:
                     found.append(child)
         if len(found) == before:
             found.extend(walk_for_skills(p))
+        else:
+            known = {f.resolve() for f in found}
+            extra = [w for w in walk_for_skills(p) if w.resolve() not in known]
+            if extra:
+                print(f"lint_skills: {len(extra)} other SKILL.md folder(s) under {raw} were not scanned "
+                      "(outside .claude/skills, .agents/skills, skills); pass them explicitly to include: "
+                      + ", ".join(str(e) for e in extra[:5]), file=sys.stderr)
     seen, unique = set(), []
     for f in found:
         key = f.resolve()

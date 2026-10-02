@@ -38,8 +38,9 @@ Audit progress:
 ## 1. Resolve scope
 
 Default scope is every skill in the current repo: folders holding a `SKILL.md` under
-`.claude/skills/`, `.agents/skills/`, or `skills/`. If the builder names one skill or a folder, audit
-only that. Follow links: a skill folder that is a symlink is audited at its real location, and that
+`.claude/skills/`, `.agents/skills/`, or `skills/`. If the lint reports other `SKILL.md` folders
+it did not scan (plugin layouts, demos), tell the builder and offer to include them. If the builder
+names one skill or a folder, audit only that. Follow links: a skill folder that is a symlink is audited at its real location, and that
 is where any fix will be saved.
 
 Note each skill's tier: one under `vendor/` or whose frontmatter says `tier: external` is someone
@@ -115,10 +116,17 @@ git repo: `git -C <repo> status --porcelain -- <skill-folder>`). If there is any
 say so in plain words; never edit over someone else's work in progress. Unsaved work elsewhere in
 the repo is left alone: it does not block the audit, and saving is scoped so it is never swept in.
 
-In a factory build home (the repo has a `githooks/pre-push` hook that runs `release-gate.py`), the
-approved edit is a gated change: first tag the skill's current state `<skill>/rollback-<n>` (next
-unused number; fetch tags first (`git -C <repo> fetch --tags`) so the number cannot collide) so
-"undo that" has a target.
+In a git repo, give "undo that" a target before the first edit to each skill:
+
+1. If the repo carries the factory's release gate (`githooks/pre-push` invokes
+   `scripts/release-gate.py`, and that script exists), install its hook first, exactly as the
+   factory spec says: `git -C <repo> config core.hooksPath githooks` — repo-local, only when
+   `core.hooksPath` is unset or already `githooks`; any other value belongs to another hook
+   manager, so say so and never overwrite it. Silent otherwise.
+2. `git -C <repo> fetch --tags` (when there is a remote), so the number cannot collide.
+3. Tag the skill's current state `<skill>/rollback-<n>`, the next unused number for that skill.
+
+Tags stay on this machine until something is published, so this is safe in any repo.
 
 Make exactly the approved changes, as written in the report. Everything else stays byte-for-byte:
 no drive-by rewording, no reformatting, no extra fixes you noticed along the way (list those as new
@@ -154,22 +162,21 @@ amend earlier history.
 
 Publishing depends on whose repo this is:
 
-- **A factory build home** (it carries the release gate): the builder's approval covers publishing,
-  as with learn-from-session. Install the gate's hook first exactly as the factory spec says
-  (repo-local `git -C <repo> config core.hooksPath githooks`, only when `core.hooksPath` is unset or
-  already `githooks`; anything else belongs to another hook manager — say so, never overwrite it).
-  Tag the new state `<skill>/review-<n>`, then publish the branch and both tags in one push:
+After each save, tag the new state `<skill>/review-<n>` (same number as its rollback tag). Then:
+
+- **A repo that carries the factory's release gate**: the builder's approval covers publishing, as
+  with learn-from-session. Publish the branch and both tags in one push:
   `git -C <repo> push origin HEAD refs/tags/<skill>/rollback-<n> refs/tags/<skill>/review-<n>`.
-- **Any other repo**: save locally, then ask once whether to publish ("Saved on this machine. Push
-  them to the shared copy too?"). A team repo may publish straight to everyone's main line, so that
-  call is the builder's.
+- **Any other repo** (a plugin build home, a team repo): save locally, then ask once whether to
+  publish ("Saved on this machine. Push them to the shared copy too?"). A team repo may publish
+  straight to everyone's main line, so that call is the builder's. On a yes, use the same one-push
+  command so the tags travel with the change.
 
 If a push is refused, say once, plainly, that the changes are saved on this machine only. Outside
 git, edit the files and say that no version history was kept.
 
-To undo an audit change later: restore that skill's folder from its rollback tag, or, where there
-is none, from the version saved just before the audit change — as a new save, never by rewriting
-history.
+To undo an audit change later: restore that skill's folder from its `rollback-<n>` tag (outside
+git, there is no undo — say so before editing) — as a new save, never by rewriting history.
 
 Close with a plain summary: what was applied per skill, what was skipped and why, and any skill
 with no saved example to replay (offer to capture one — rubric K1).
@@ -190,5 +197,9 @@ Talk to the builder in plain language throughout: "saved", "put back", "publishe
   one-step skill or a feedback loop to a lookup skill is noise, not compliance.
 - **Description rewrites are where audits break skills.** Shortening a description drops trigger
   phrases and the skill silently stops loading. Keep the phrases; cut the catch-alls.
+- **Rank by the rubric's priority definitions, not by the size of the fix.** A one-line YAML repair
+  that makes a skill load again is P1; so is anything that stops it triggering.
+- **An empty `## Gotchas` heading is a pass, not clutter** (J1 wants it present from birth). Never
+  recommend removing it.
 - **`model:` in frontmatter is not documentation.** In Claude Code it switches the model; record the
   target under `metadata` → `target-models` instead.
