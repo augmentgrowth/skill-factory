@@ -128,9 +128,10 @@ or logging any value**. Never commit, print, or repeat a secret. The `.env` is g
 
 ## Step 5 — Self-critique
 
-First run the lint — `python3 "${CLAUDE_SKILL_DIR}/../audit-skill/scripts/lint_skills.py" <skill-folder>`
-(stdlib only, no install; the path is relative to this skill's folder) — and resolve
-every `fix` finding before anything else; it catches the mechanical misses (limits,
+First run the lint —
+`python3 "${CLAUDE_SKILL_DIR}/../audit-skill/scripts/lint_skills.py" <skill-folder>` (stdlib
+only, no install; `${CLAUDE_SKILL_DIR}` is this skill's folder — on harnesses that don't
+substitute it, use that folder's path) — and resolve every `fix` finding before anything else; it catches the mechanical misses (limits,
 nesting, missing Contents lists, undeclared dependencies) so your own pass can spend
 its attention on judgment. Then run the six checks in `references/self-critique.md`
 (Voice / Principles / Anti-Pattern / Example / Model Calibration / Focus) and fix what
@@ -158,7 +159,8 @@ baseline vs with-skill. **The builder judges.**
 
 ## Step 7 — Done + personal install
 
-1. **In a factory clone, settle publishability first.** Its release gate refuses to publish a
+1. **In a factory clone, settle publishability first.** A factory clone is a repo whose
+   `githooks/pre-push` invokes `scripts/release-gate.py`. Its release gate refuses to publish a
    new skill whose frontmatter lacks `public_safe: true`. Ask the builder once, plainly: "Is this
    skill safe for anyone to see — no client names, private data, or internal detail?" On a yes,
    add `public_safe: true` to the frontmatter; on a no, leave it out and say the skill will stay

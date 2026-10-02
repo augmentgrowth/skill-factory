@@ -10,9 +10,9 @@ authoring best practices, the Claude Code skills docs, the Agent Skills spec, th
 prompting pages, and OpenAI's Codex skill-creator. This file adds only what the factory's own
 process requires on top of it.
 
-- [ ] **Lint is clean of `fix` findings.** Run
-      `python3 "${CLAUDE_SKILL_DIR}/../audit-skill/scripts/lint_skills.py" <skill-folder>` (stdlib only, no install) and
-      resolve every `fix`; judge every `check`. It covers the mechanical rubric rules: name and
+- [ ] **Lint is clean of `fix` findings.** Run the lint command in SKILL.md Step 5 (the script is
+      `../audit-skill/scripts/lint_skills.py`, relative to build-skill's folder; stdlib only, no
+      install) and resolve every `fix`; judge every `check`. It covers the mechanical rubric rules: name and
       description limits, size, nested or orphaned references, Contents lists on long references,
       shouty language, undeclared script dependencies.
 - [ ] **Rubric judgment rules pass.** Walk the rubric's judgment rules against the draft — above
