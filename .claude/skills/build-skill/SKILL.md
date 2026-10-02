@@ -133,8 +133,9 @@ First run the lint —
 only, no install; `${CLAUDE_SKILL_DIR}` is this skill's folder — on harnesses that don't
 substitute it, use that folder's path) — and resolve every `fix` finding before anything
 else; it catches the mechanical misses (limits, nesting, missing Contents lists, undeclared
-dependencies) so your own pass can spend its attention on judgment. Then run the six checks in `references/self-critique.md`
-(Voice / Principles / Anti-Pattern / Example / Model Calibration / Focus) and fix what
+dependencies) so your own pass can spend its attention on judgment. Then run the six
+checks in `references/self-critique.md` (Voice / Principles / Anti-Pattern / Example /
+Model Calibration / Focus) and fix what
 fails **before showing the builder the draft**. Present an honest assessment: what
 improved, what is still weak, what you need answered.
 
