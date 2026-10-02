@@ -41,6 +41,7 @@ SHOUTY_LIMIT = 5  # occurrences per file before it reads as shouting
 LINK_RE = re.compile(r"\[[^\]]*\]\(([^)\s]+)\)")
 BACKTICK_PATH_RE = re.compile(r"`((?:\.{1,2}/)?(?:[\w.-]+/)*[\w.-]+\.(?:md|py|sh|js|ts|json|yaml|yml|txt))`")
 BACKSLASH_PATH_RE = re.compile(r"\b[\w.-]+\\[\w.-]+\\?[\w.-]*\.(?:py|md|sh|js|ts|json|txt)\b")
+PIPE_TO_SHELL_RE = re.compile(r"\b(curl|wget)\b[^|\n]*\|\s*(sudo\s+)?(ba|z)?sh\b")
 TIME_BOMB_RE = re.compile(
     r"\b(before|after|until|as of)\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+20\d\d\b",
     re.IGNORECASE,
@@ -445,6 +446,23 @@ def check_language(rep: SkillReport, skill_dir: Path) -> None:
     rep.facts["shouty_words"] = total
 
 
+def check_untrusted(rep: SkillReport, skill_dir: Path) -> None:
+    """D2: downloaded code piped straight into a shell, anywhere in the skill (code blocks included)."""
+    for f in sorted(skill_dir.rglob("*")):
+        if not f.is_file() or f.suffix not in (".md", ".sh", ".py", ".js", ".mjs", ".ts", ""):
+            continue
+        if set(f.relative_to(skill_dir).parts[:-1]) & SKIP_DIRS:
+            continue
+        try:
+            lines = read_lines(f)
+        except OSError:
+            continue
+        for n, line in enumerate(lines, start=1):
+            if m := PIPE_TO_SHELL_RE.search(line):
+                rep.add("D2", "fix", f, n, f"{m.group(0)!r} runs downloaded code unseen; download, "
+                        "check, then run — or vendor the script into the skill")
+
+
 def check_gotchas(rep: SkillReport, skill_md: Path, lines: list[str]) -> None:
     if not any(re.match(r"^#{2,3}\s+(gotchas|common pitfalls|pitfalls)\b", l, re.IGNORECASE) for _, l in prose_lines(lines)):
         rep.add("J1", "check", skill_md, len(lines), "no ## Gotchas section")
@@ -535,6 +553,7 @@ def lint(skill_dir: Path) -> SkillReport:
     check_size(rep, skill_md, lines)
     check_references(rep, skill_dir, skill_md, lines)
     check_language(rep, skill_dir)
+    check_untrusted(rep, skill_dir)
     check_gotchas(rep, skill_md, lines)
     check_scripts(rep, skill_dir, "\n".join(lines))
     check_evals(rep, skill_dir)
