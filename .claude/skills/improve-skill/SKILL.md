@@ -65,30 +65,9 @@ Where the proposal and case live depends on the tier:
   the repo's health check red. These skills never enter the anneal queue, so **the proposal file is
   the only record that the failure was ever found**; treat losing it as losing the finding.
 
-  - **Where:** `<repo>/docs/proposals/<YYYY-MM-DD>-<skill>-<slug>.md`. Create `docs/proposals/` if
-    absent. `<repo>` is the repo that owns the skill — resolve it now the way Step 2 does
-    (`realpath` the serving path, then `rev-parse --show-toplevel`); it is never the repo you happen
-    to be standing in. Use this path even when the repo has some other proposals directory for a
-    different genre — one predictable location beats a well-reasoned guess, because the next agent
-    will guess differently. The date prefix matters: a recurrence with the same slug must not
-    silently overwrite the earlier proposal.
-  - **Durability:** save it permanently, path-scoped and alone —
-    `git -C <repo> add docs/proposals/<YYYY-MM-DD>-<skill>-<slug>.md` then
-    `git -C <repo> commit -m "Proposal for <skill>: <slug> (static — not self-edited)" -- docs/proposals/<YYYY-MM-DD>-<skill>-<slug>.md`.
-    A proposal left loose in a busy repo is one cleanup away from gone, and nothing in the queue
-    will notice it is missing.
-  - **When the repo publishes, redirect the save — do not skip it.** A proposal quotes real paths
-    and machine detail, so it must never land in a repo that publishes (a public remote, or an
-    auto-sync cron). Write it to the private hub's (a personal skill-home repo; see
-    the factory's `templates/skill-home/README.md` — under a plugin install, at
-    `${CLAUDE_PLUGIN_ROOT}/templates/skill-home/README.md`) proposal queue instead, at the same
-    `docs/proposals/<YYYY-MM-DD>-<skill>-<slug>.md` path, and tell the builder in plain language
-    where it went. Leaving it unsaved was the old remedy and it was wrong: the proposal is the only
-    failure record a static skill ever gets, and a loose file is one cleanup away from gone.
-  - **Do not save it at all when** the repo is not yours to write to (a background run that hit
-    stray paths, or another session's branch) and no private hub is reachable. Leave the file where
-    it is, tell the builder its location, and say plainly that it is not saved permanently yet.
-    This is the one save in the protocol that happens before any preflight has run.
+  Where the proposal goes, how it is saved, and when it must not be saved are exact rules: read
+  [references/static-proposals.md](references/static-proposals.md) and follow it before writing
+  anything.
 - **Personal-tier skill carrying `static: true`:** if a case was already captured — you got here
   from the queue — write the terminal marker from Step 7 and commit it alone
   (`git -C <repo> add <skill-folder>/cases/<YYYY-MM-DD>-<slug>` then
@@ -162,10 +141,11 @@ The case is safe on disk. Now decide who fixes it:
   session is done.
 - **If it cannot** (or background work is suppressed): STOP. Say in one plain line that the failing
   example is saved and will be picked up next time the skill is worked on. The case stays queued —
-  the next factory session or a scheduled sweep drains it (see *Draining the queue*).
+  the next factory session or a scheduled sweep drains it (see [references/draining-the-queue.md](references/draining-the-queue.md)).
 
-Everything from Step 5 down runs **under the lock** described in *The lock protocol*. Acquire it
-before the first fix; release it at every exit.
+Everything from Step 5 down runs **under the lock** described in
+[references/lock-protocol.md](references/lock-protocol.md). Acquire it before the first fix;
+release it at every exit.
 
 ## Step 5 — Fix → replay loop (max 3 attempts)
 
@@ -248,52 +228,15 @@ the folder:
 
 ## The lock protocol
 
-One skill anneals at a time. The lock belongs to whoever is annealing — **the capturing session
-never takes it.**
-
-1. **Acquire** `<repo>/.anneal/locks/<skill>` by atomic create (fail if it already exists). Content,
-   two lines exactly (this is the format the repo's audit tooling parses — do not improvise):
-   `pid: <n>` then `started: <ISO-8601 timestamp>`.
-
-   **`<n>` is the pid of the long-lived process doing the anneal** — your agent/session process,
-   the one that will still be alive through Step 6. It is **not** the pid of the shell that writes
-   the file. Writing that shell's own `$$` from a one-liner is the natural move and it is **wrong**:
-   each tool-call shell exits when its command returns, so its `$$` is dead almost immediately, the
-   lock is born recording a dead process, and every later liveness check reads it as stale. Read
-   your session's pid from the runtime rather than from the shell doing the write. If you cannot
-   determine a pid that outlives the acquire command, write `pid: unknown` — never a pid you already
-   know will be dead.
-2. **Already held by a live holder** → **exit quietly.** Do not wait, do not double-anneal. The case
-   stays queued and the holder or a later sweep handles it. "Live" means the recorded `started:` is
-   under two hours old **and** the pid does not positively disprove it:
-   - pid names a running process → the pid does not disprove liveness; the timestamp still governs.
-   - `pid: unknown`, or a pid you cannot check on this platform → same: **treat as live** and back
-     off while the timestamp is young. An unverifiable pid is not evidence of death.
-   - pid names no running process → dead; go to 3.
-3. **Stale** — the recorded `started:` is more than two hours old, **or** the recorded pid is
-   confirmed dead → reclaim it: overwrite with your own pid and timestamp, and continue. (Audit
-   tooling may also use the lock file's age as a fallback signal when the `started:` line is missing
-   or unparseable.)
-4. **Release** — delete the lock file — at *every* exit: green, exhausted, aborted preflight, or
-   error. A lock outliving its run is the one failure mode that stalls a whole skill.
-5. Locks are runtime state, never committed. The home repo ignores `.anneal/locks/`; if it does not
-   yet, say so and let the builder's repo add it rather than committing lock files.
+One skill anneals at a time, under a per-skill lock at `<repo>/.anneal/locks/<skill>`; the
+capturing session never takes it. Before Step 5, read
+[references/lock-protocol.md](references/lock-protocol.md) and follow it exactly — whose pid to
+record, when a held lock is live or stale, and releasing at every exit.
 
 ## Draining the queue
 
-A factory session may work through everything waiting in the repo it is standing in — "drain the
-anneal queue", or just noticing a backlog.
-
-- **A queue entry** is a dated case directory (`cases/<YYYY-MM-DD>-<slug>/`) with **no `.annealed`
-  file**. `cases/baseline/` is never a queue entry, and neither is anything undated.
-- For each entry, oldest first: run Step 1 (static check), Step 2 (resolve + scoped preflight —
-  this is a background-style run, so abort-and-requeue rather than ask), take the lock, then Steps
-  5-7. Skip the capture step — the case already exists — and Step 4 is moot: you are already the
-  annealing agent, so there is no dispatch decision to make.
-- **One skill at a time.** Anything whose lock is held by a live holder is skipped silently and
-  stays queued.
-- Report at the end in plain language: how many failures were waiting, which are fixed, which still
-  need the builder.
+For "drain the anneal queue", or any backlog of unmarked dated cases, read
+[references/draining-the-queue.md](references/draining-the-queue.md).
 
 ## Bounds (do not cross)
 
