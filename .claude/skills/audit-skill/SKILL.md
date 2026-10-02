@@ -52,7 +52,7 @@ python3 "${CLAUDE_SKILL_DIR}/scripts/lint_skills.py" <scope paths> --json
 ```
 
 `${CLAUDE_SKILL_DIR}` is this skill's own folder; on harnesses that do not substitute it, use the
-folder this SKILL.md lives in. The script is stdlib-only Python 3.10+, needs no install, never
+folder this SKILL.md lives in. The script is stdlib-only Python 3.9+, needs no install, never
 edits anything, and exits 0 whenever the scan completed. Its findings are evidence for the rubric's
 mechanical rules, tagged with rule IDs and file:line; its `facts` (line counts, reference files,
 scripts, frontmatter keys, target models) save you re-deriving them. If Claude Code's
@@ -117,7 +117,8 @@ the repo is left alone: it does not block the audit, and saving is scoped so it 
 
 In a factory build home (the repo has a `githooks/pre-push` hook that runs `release-gate.py`), the
 approved edit is a gated change: first tag the skill's current state `<skill>/rollback-<n>` (next
-unused number; fetch tags first so the number cannot collide) so "undo that" has a target.
+unused number; fetch tags first (`git -C <repo> fetch --tags`) so the number cannot collide) so
+"undo that" has a target.
 
 Make exactly the approved changes, as written in the report. Everything else stays byte-for-byte:
 no drive-by rewording, no reformatting, no extra fixes you noticed along the way (list those as new
@@ -145,9 +146,10 @@ If the builder asks for the diff, show the raw diff too — the request wins ove
 ## 7. Save
 
 In a git repo, save each changed skill on its own: stage only that skill's folder by explicit path
-(`git -C <repo> add <skill-folder>`, never a repo-wide add), commit with a message like
-`Audit fixes for <skill>: C4, D1`, and append one line to its `CHANGELOG.md` if it has one
-(`[YYYY-MM-DD] Audit: <what changed>`). Never rewrite or amend earlier history.
+(`git -C <repo> add <skill-folder>`, never a repo-wide add), commit only that folder:
+`git -C <repo> commit -m "Audit fixes for <skill>: C4, D1" -- <skill-folder>`, and append one line
+to its `CHANGELOG.md` if it has one (`[YYYY-MM-DD] Audit: <what changed>`). Never rewrite or
+amend earlier history.
 
 Publishing depends on whose repo this is:
 
@@ -155,7 +157,8 @@ Publishing depends on whose repo this is:
   as with learn-from-session. Install the gate's hook first exactly as the factory spec says
   (repo-local `git -C <repo> config core.hooksPath githooks`, only when `core.hooksPath` is unset or
   already `githooks`; anything else belongs to another hook manager — say so, never overwrite it).
-  Push the branch and the rollback tags together, and tag the pushed state `<skill>/review-<n>`.
+  Tag the new state `<skill>/review-<n>`, then publish the branch and both tags in one push:
+  `git -C <repo> push origin HEAD refs/tags/<skill>/rollback-<n> refs/tags/<skill>/review-<n>`.
 - **Any other repo**: save locally, then ask once whether to publish ("Saved on this machine. Push
   them to the shared copy too?"). A team repo may publish straight to everyone's main line, so that
   call is the builder's.
