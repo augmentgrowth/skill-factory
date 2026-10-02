@@ -119,8 +119,10 @@ the factory's root — in a clone that is the repo root; under a plugin install 
   no over-explaining, no "write out your reasoning", key rules near the top. Record the
   models you test on in `metadata` → `target-models`.
 
-**Don't teach to the test.** Rules and examples in the skill never quote the figures or answers
-from `cases/baseline/input.md` — use a different week, client or sample. A skill that contains its
+**Don't teach to the test.** Rules and examples in the skill never quote the sample's data or
+the answers computed from it — this week's totals, per-row results, the expected output from
+`cases/baseline/input.md`; use a different week, client or sample. Standing rules the builder
+states (a target, a threshold, a channel) belong in the skill. A skill that contains its
 fixture's answers wins the side-by-side by recall, and the replay proves nothing about next week.
 
 Scaffold the `## Gotchas` section at birth, even if it starts with one placeholder line.
@@ -146,7 +148,7 @@ Dispatch a **fresh sub-agent** with only three things: the draft's folder path, 
 `../audit-skill/SKILL.md` (relative to this skill's folder), and the instruction "Follow this
 audit skill's steps 1–4 on that one skill, report only — change nothing, and stop at the
 question. Run its scripts rather than trusting them, including feeding any checker a
-deliberately bad output." Fix every P1 and P2 it reports (or say in one line why a finding
+deliberately bad output — but never run anything that sends, posts, deletes or spends." Fix every P1 and P2 it reports (or say in one line why a finding
 does not apply),
 re-run the lint, and only then show the builder the draft. P3 items go into the honest
 assessment for the builder to decide.
