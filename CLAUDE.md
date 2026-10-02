@@ -158,7 +158,9 @@ On rejection, path-scoped restore from the rollback tag as a new commit, then re
 
 **Changes approved before they are made have passed the gate.** `learn-from-session` and `audit-skill`
 show the builder the exact edit and apply only what was approved, so their edits ship with no output
-receipt. They still get the `<skill>/rollback-<n>` tag first (and `review-<n>` on the shipped state), so
+receipt. (One deliberate difference: outside a repo that carries the release gate, `audit-skill` asks
+once before publishing, because a builder's own or team repo may publish straight to everyone's main
+line; `learn-from-session` publishes on its approval.) They still get the `<skill>/rollback-<n>` tag first (and `review-<n>` on the shipped state), so
 "undo that" restores to the state just before them instead of rolling past earlier accepted work.
 
 **One exception, and it is not a human gate:** graduation's CRITICAL script-efficiency stop. That
