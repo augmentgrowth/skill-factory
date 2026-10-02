@@ -192,7 +192,7 @@ baseline vs with-skill. **The builder judges.**
    `public_safe: true`), say once, plainly, that the skill is saved on this machine only.
    Degraded mode: skip all of this with the notice.
 3. **Offer the personal install.** Copy the skill folder — including `cases/`,
-   `CHANGELOG.md`, and `.env.example` if present, but **NEVER** the real `.env` — to the
+   `CHANGELOG.md`, and `.env.example` if present, but **NEVER** the real `.env` (or a personal `config.json`) — to the
    harness's personal skills directory (Claude Code: `~/.claude/skills/<name>/`; other
    harnesses per the spec's Harness notes matrix in `CLAUDE.md`).
 4. Tell the builder the **build home remains the skill's system of record** — that's

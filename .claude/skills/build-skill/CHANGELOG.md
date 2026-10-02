@@ -14,3 +14,4 @@ One line per change, newest last. Format: `[YYYY-MM-DD] What changed and why`.
 - [2026-10-02] Gotcha: without a sub-agent tool, the fresh readers in Steps 2, 5 and 6 are headless sessions started from an empty folder (found by the first cold build run).
 - [2026-10-02] Headless-session fallback gives the exact working command (a bare claude -p is denied file reads); Step 4 forbids quoting the fixture's answers in the skill (don't teach to the test); the Step 5 independent audit runs the draft's scripts, feeding any checker a bad output — a cold build's checker passed three bad drafts.
 - [2026-10-02] 'Don't teach to the test' distinguishes the sample's data and answers (forbidden) from standing rules the builder states, like a target (belong in the skill); the independent auditor never runs anything that sends, posts, deletes or spends.
+- [2026-10-02] Personal install leaves a personal config.json behind, matching graduate-skill.
