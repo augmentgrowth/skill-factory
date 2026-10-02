@@ -121,7 +121,8 @@ unused number; fetch tags first so the number cannot collide) so "undo that" has
 
 Make exactly the approved changes, as written in the report. Everything else stays byte-for-byte:
 no drive-by rewording, no reformatting, no extra fixes you noticed along the way (list those as new
-suggestions instead). A description edit keeps every trigger phrase the old one had unless dropping
+suggestions instead). An edit may tidy only its own seam — deleting a line takes its now-doubled
+blank line with it. A description edit keeps every trigger phrase the old one had unless dropping
 one was the approved change. A rename updates every place that invokes the skill by name.
 
 A skill marked `static: true` is still edited when the builder approves: static guards
