@@ -12,3 +12,4 @@ One line per change, newest last. Format: `[YYYY-MM-DD] What changed and why`.
 - [2026-10-02] Saved baseline case (input + judging rubric) so later changes to this skill can be replayed and proven safe.
 - [2026-10-02] Step 5 now dispatches a fresh sub-agent to run audit-skill's report on every draft (the author doesn't grade their own work); P1/P2 findings are fixed before the builder sees the draft.
 - [2026-10-02] Gotcha: without a sub-agent tool, the fresh readers in Steps 2, 5 and 6 are headless sessions started from an empty folder (found by the first cold build run).
+- [2026-10-02] Headless-session fallback gives the exact working command (a bare claude -p is denied file reads); Step 4 forbids quoting the fixture's answers in the skill (don't teach to the test); the Step 5 independent audit runs the draft's scripts, feeding any checker a bad output — a cold build's checker passed three bad drafts.

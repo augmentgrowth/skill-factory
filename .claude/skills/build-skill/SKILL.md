@@ -119,6 +119,10 @@ the factory's root — in a clone that is the repo root; under a plugin install 
   no over-explaining, no "write out your reasoning", key rules near the top. Record the
   models you test on in `metadata` → `target-models`.
 
+**Don't teach to the test.** Rules and examples in the skill never quote the figures or answers
+from `cases/baseline/input.md` — use a different week, client or sample. A skill that contains its
+fixture's answers wins the side-by-side by recall, and the replay proves nothing about next week.
+
 Scaffold the `## Gotchas` section at birth, even if it starts with one placeholder line.
 
 **Credentials are lazy (only if the skill actually needs them):** scaffold a committed
@@ -141,7 +145,9 @@ Model Calibration / Focus) and fix what fails.
 Dispatch a **fresh sub-agent** with only three things: the draft's folder path, the path to
 `../audit-skill/SKILL.md` (relative to this skill's folder), and the instruction "Follow this
 audit skill's steps 1–4 on that one skill, report only — change nothing, and stop at the
-question." Fix every P1 and P2 it reports (or say in one line why a finding does not apply),
+question. Run its scripts rather than trusting them, including feeding any checker a
+deliberately bad output." Fix every P1 and P2 it reports (or say in one line why a finding
+does not apply),
 re-run the lint, and only then show the builder the draft. P3 items go into the honest
 assessment for the builder to decide.
 
@@ -193,11 +199,13 @@ baseline vs with-skill. **The builder judges.**
 
 ## Gotchas
 
-- **No sub-agent tool? Use a fresh headless session.** Steps 2, 5 and 6 each want a reader with no
-  memory of the draft. Where the harness cannot spawn sub-agents, start one with `claude -p "<the
-  instruction>"` from an empty folder (or the harness's equivalent), passing only the paths the
-  step names. Doing the independent audit yourself defeats it — say so if neither is available.
-  Found by the first cold build run, which had no Agent tool and improvised exactly this.
+- **No sub-agent tool? Use a fresh headless session.** Step 2's no-skill baseline, Step 5's audit
+  and efficiency pass, and Step 6's with-skill run each need a session that has not seen this
+  conversation. Where the harness cannot spawn sub-agents, start one from an empty folder, granting
+  only the folders and tools the step needs — a bare `claude -p "…"` is denied file reads:
+  `claude -p --add-dir <skill-folder> --add-dir <factory-skills-folder> --allowedTools "Read" "Grep" "Glob" "Bash(python3:*)" -- "<the instruction>"`.
+  Doing the independent audit yourself defeats it; say so if neither route is available. Found by
+  the first cold build run, which had no Agent tool and improvised this.
 
 - **Hot-load is not guaranteed.** A skill folder created mid-session may not appear in the
   `/` menu; always run the with-skill test by explicit invocation (name it or point the
