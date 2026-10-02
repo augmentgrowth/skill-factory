@@ -151,7 +151,7 @@ check again, proceeding only when it passes. A generic "double-check your work" 
 a fix to remove: current Opus models already self-verify and over-verify when told to.
 
 The check has to be able to fail. A validator is only evidence once it has been run against a
-deliberately bad output (the no-skill baseline is a ready one, plus a draft that breaks each rule
+deliberately bad output (the no-skill baseline is usually one; better, a draft that breaks each rule
 it claims to enforce) and caught it. A checker that passes everything — or checks format while the
 skill's core rule goes unchecked — is a fix, however good it looks on the page.
 
@@ -224,8 +224,8 @@ Without it, no change can be proven to keep the skill working. Fix: capture one 
 now (the audit can draft it; the builder confirms it).
 
 A case only proves something if the skill doesn't contain its answers. When the skill's rules or
-examples quote the case's specific figures, names or outputs, the replay measures recall, not the
-skill: fix by moving the skill's examples to different numbers, or by adding a second case the
+examples quote the sample's data or outputs computed from it (not standing rules like a target the
+builder set), the replay measures recall, not the skill: fix by moving the skill's examples to different numbers, or by adding a second case the
 skill has never seen.
 
 ## L. Factory extras

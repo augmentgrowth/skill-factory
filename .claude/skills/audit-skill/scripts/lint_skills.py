@@ -44,7 +44,7 @@ BACKSLASH_PATH_RE = re.compile(r"\b[\w.-]+\\[\w.-]+\\?[\w.-]*\.(?:py|md|sh|js|ts
 PIPE_TO_SHELL_RE = re.compile(
     r"\b(curl|wget)\b[^|\n]*\|\s*(sudo\s+)?((ba|z)?sh|python3?|node|perl|ruby)\b"
     r"|\b((ba|z)?sh|source)\s+<\(\s*(curl|wget)\b")
-NEGATED_RE = re.compile(r"\b(never|don't|do not|avoid|no)\b", re.IGNORECASE)
+NEGATED_RE = re.compile(r"\b(never|don't|do not|avoid)\b", re.IGNORECASE)
 TIME_BOMB_RE = re.compile(
     r"\b(before|after|until|as of)\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+20\d\d\b",
     re.IGNORECASE,
@@ -466,7 +466,8 @@ def check_untrusted(rep: SkillReport, skill_dir: Path) -> None:
         for n, line in enumerate(lines, start=1):
             if m := PIPE_TO_SHELL_RE.search(line):
                 # A prose sentence warning against it ("never pipe a download to sh") is a mention.
-                level = "check" if n in prose and NEGATED_RE.search(line) else "fix"
+                neg = NEGATED_RE.search(line)
+                level = "check" if n in prose and neg and neg.start() < m.start() else "fix"
                 rep.add("D2", level, f, n, f"{m.group(0)!r} runs downloaded code unseen; download, "
                         "check, then run — or vendor the script into the skill")
 
