@@ -1,13 +1,12 @@
 ---
 name: fable-codex
-description: "Two-model coding loop — Claude orchestrates, GPT-5.6 Sol argues plans
-  and reviews code, GPT-5.6 Luna implements, all through persistent codex CLI
-  threads. Default-on for any non-trivial coding task when planning, implementing,
-  reviewing, or fixing — not just when asked to delegate. Use when building a
-  feature, executing a plan, refactoring across files, or fixing a real bug.
-  Triggers on: implement, build, refactor, fix, code review, plan review, delegate
-  to codex, second model, sol, luna, two-model verification. NOT for trivial edits,
-  pure Q&A, or single-file mechanical changes."
+description: >-
+  Two-model coding loop — Claude orchestrates, GPT-5.6 Sol argues plans and reviews code,
+  GPT-5.6 Luna implements, through persistent codex CLI threads. Use when the builder asks
+  for a second model on a multi-file feature, plan, refactor or real bug fix: "delegate to
+  codex", "have sol review this", "run the fable-codex loop", "two-model verification".
+  Not for everyday implement/fix/refactor requests that don't ask for a second model,
+  trivial edits, pure Q&A, or denylisted repos — the loop sends repo content to OpenAI.
 ---
 
 # Fable-Codex — two-model orchestration loop
