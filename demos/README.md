@@ -51,7 +51,7 @@ where nothing auto-loads it.
 
 `artifacts/fable-codex-factory-run/` holds the frozen task and the full with-skill audit trail.
 The built skill graduated to its owner's private build home; `skill/` in this folder is a frozen
-snapshot of the SKILL.md, changelog, and cases as they stood at the stress test. (One post-run edit, 2026-10-02: its frontmatter description was quote-wrapped, wording unchanged, so it parses as YAML.)
+snapshot of the SKILL.md, changelog, and cases as they stood at the stress test. (Post-run edits: 2026-10-02 the frontmatter was made to parse as YAML; 2026-10-03 its triggers were narrowed to explicit second-model requests — see its `CHANGELOG.md`.)
 
 ```
 task.md                 the frozen pm-agent task
