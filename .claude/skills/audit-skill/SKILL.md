@@ -207,3 +207,5 @@ Talk to the builder in plain language throughout: "saved", "put back", "publishe
   recommend removing it.
 - **`model:` in frontmatter is not documentation.** In Claude Code it switches the model; record the
   target under `metadata` → `target-models` instead.
+
+- A warning beside a download-and-execute example is a judgment check; unrelated warnings do not excuse another executable instruction on the same line.

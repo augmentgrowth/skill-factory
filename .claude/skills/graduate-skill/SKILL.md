@@ -22,7 +22,7 @@ Graduation progress:
 - [ ] 1. Pre-graduation checks pass — if not, back to the builder
 - [ ] 2. No CRITICAL efficiency finding — if one, fix it and repeat step 2
 - [ ] 3. Eval gate offered
-- [ ] 4. Copied to the personal skills directory without .env or config.json
+- [ ] 4. Copied to the personal directory; shared config included, personal settings retained
 - [ ] 5. Tagged, published, output receipt handed over
 ```
 
@@ -92,12 +92,23 @@ steps. In that case do exactly this handoff and stop; no guided-flow ceremony, n
 
 ## Step 4 — Personal install
 
-Copy the whole skill folder to the personal skills directory named in the spec's **Harness notes**
-matrix for the active harness (Claude Code: `~/.claude/skills/<name>/`; cite the matrix rather than
-hardcoding for any other harness):
-`rsync -a --delete --exclude '.env' --exclude 'config.json' <skill-folder>/ ~/.claude/skills/<name>/`
-(`--delete` clears files from an earlier graduation; the excluded `.env` and `config.json` — the
-builder's own secrets and settings — are kept).
+Install to the personal skills directory named in the spec's **Harness notes** matrix for the
+active harness. Resolve the canonical source folder and use an ordinary destination path; stop
+if either tree or any ancestor contains a symbolic link, or the roots overlap.
+
+Run [scripts/install_skill.py](scripts/install_skill.py) for this step (Python 3 standard library;
+install prerequisites on macOS: `brew install python git rsync`, or the platform package manager):
+
+```sh
+python3 "${CLAUDE_SKILL_DIR}/scripts/install_skill.py" "<canonical-skill-folder>" "<personal-skills-directory>/<name>"
+```
+
+Where the harness does not substitute `${CLAUDE_SKILL_DIR}`, use this skill's folder path.
+The helper updates ordinary files and removes stale ordinary files. It excludes `.git` metadata, never copies `.env`, and
+preserves every installed `.env` and `config.json`, including nested ones. On a fresh install it
+copies a source `config.json` only when git tracks it and ignore rules do not mark it personal.
+Untracked or ignored settings stay behind. Existing installed config remains authoritative on
+re-graduation; a source/destination settings-directory conflict stops before copying.
 
 **The copy includes:** `cases/`, `CHANGELOG.md`, the `## Gotchas` section, `.env.example`, and the
 Improvement protocol block — **unless the skill's frontmatter is `static: true`**, in which case that
@@ -137,3 +148,6 @@ mechanics; if asked, say it is deferred and the skill's home stays its build hom
 - **Static skills graduate without an improvement protocol.** Check `static: true` before copying; the
   anneal block must not travel with a static skill.
 - **`.env` never travels.** Only `.env.example` ships; the real `.env` is recreated on first use.
+
+- **Shared config must arrive on the first install.** Excluding every config.json loses portable
+  committed settings; copy tracked, non-ignored config only when no installed config exists.
