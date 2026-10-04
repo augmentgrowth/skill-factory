@@ -42,9 +42,8 @@ LINK_RE = re.compile(r"\[[^\]]*\]\(([^)\s]+)\)")
 BACKTICK_PATH_RE = re.compile(r"`((?:\.{1,2}/)?(?:[\w.-]+/)*[\w.-]+\.(?:md|py|sh|js|ts|json|yaml|yml|txt))`")
 BACKSLASH_PATH_RE = re.compile(r"\b[\w.-]+\\[\w.-]+\\?[\w.-]*\.(?:py|md|sh|js|ts|json|txt)\b")
 PIPE_TO_SHELL_RE = re.compile(
-    r"\b(curl|wget)\b[^|\n]*\|\s*(sudo\s+)?((ba|z)?sh|python3?|node|perl|ruby)\b"
+    r"\b(curl|wget)\b(?:(?!\b(?:curl|wget)\b)[^|`;\n])*\|\s*(sudo\s+)?((ba|z)?sh|python3?|node|perl|ruby)\b"
     r"|\b((ba|z)?sh|source)\s+<\(\s*(curl|wget)\b")
-NEGATED_RE = re.compile(r"\b(never|don't|do not|avoid)\b", re.IGNORECASE)
 TIME_BOMB_RE = re.compile(
     r"\b(before|after|until|as of)\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+20\d\d\b",
     re.IGNORECASE,
@@ -464,12 +463,23 @@ def check_untrusted(rep: SkillReport, skill_dir: Path) -> None:
             continue
         prose = {n for n, _ in prose_lines(lines)} if f.suffix == ".md" else set()
         for n, line in enumerate(lines, start=1):
-            if m := PIPE_TO_SHELL_RE.search(line):
-                # A prose sentence warning against it ("never pipe a download to sh") is a mention.
-                neg = NEGATED_RE.search(line)
-                level = "check" if n in prose and neg and neg.start() < m.start() else "fix"
-                rep.add("D2", level, f, n, f"{m.group(0)!r} runs downloaded code unseen; download, "
-                        "check, then run — or vendor the script into the skill")
+            for m in PIPE_TO_SHELL_RE.finditer(line):
+                # Negation belongs to this command, not any earlier warning on the line.
+                prefix = line[:m.start()]
+                suffix = line[m.end():]
+                before = re.search(
+                    r"\b(?:never|don't|do not|avoid)\s+(?:(?:run|running|execute|executing|"
+                    r"use|using|pipe|piping)\s+)?[`\s]*$", prefix, re.IGNORECASE)
+                after = re.match(
+                    r"[`\s]*(?:—|–|--|:)\s*(?:never|don't|do not)\s+"
+                    r"(?:do|run|execute|use)\s+(?:this|that|it)\s*[.!]?\s*$",
+                    suffix, re.IGNORECASE)
+                level = "check" if n in prose and (before or after) else "fix"
+                message = (f"{m.group(0)!r} appears in a warning; verify the surrounding guidance"
+                           if level == "check" else
+                           f"{m.group(0)!r} runs downloaded code unseen; download, "
+                           "check, then run — or vendor the script into the skill")
+                rep.add("D2", level, f, n, message)
 
 
 def check_gotchas(rep: SkillReport, skill_md: Path, lines: list[str]) -> None:
