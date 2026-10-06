@@ -65,7 +65,8 @@ Checked <YYYY-MM-DD>, before the independent audit.
 | Focus | … | … | … |
 ```
 
-- All six rows, every time. Verdict is `pass` or `fix`; `fix` means it failed and you fixed it.
+- All six rows, every time. Verdict is `pass`, `fix` (it failed and you fixed it), or `weak` (it
+  failed and the fix is deferred; name it under "Still weak" with a one-line proposed fix).
 - Evidence is one line: a file:line or a short quote showing where the draft *now* meets the check.
 - Fixed says what changed, or `—` for a pass. Anything you chose not to fix goes in "Still weak"
   below, not here.
