@@ -14,3 +14,4 @@ One line per change, newest last. Format: `[YYYY-MM-DD] What changed and why`.
 - [2026-10-02] Re-graduation keeps the installed copy's config.json as well as .env (rsync excludes both).
 - [2026-10-03] Personal installation now includes absent tracked shared config, preserves installed settings at every depth, and rejects unsafe paths before copying.
 - [2026-10-06] Backfilled the six-check self-critique record (cases/baseline/self-critique.md); no skill text changed. Still weak: three Gotchas entries restate the steps.
+- [2026-10-06] Cut three gotchas that restated the body (Focus check); kept the shared-config gotcha.

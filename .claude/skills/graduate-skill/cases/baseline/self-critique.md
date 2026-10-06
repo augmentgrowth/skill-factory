@@ -2,8 +2,8 @@
 
 Backfill run on 2026-10-06 for a skill built before the self-critique record existed. The six
 checks ran against SKILL.md and references/script-efficiency-review.md as they stand; there was
-no draft-stage audit to precede. One check is not a pass and was left unfixed; its row says
-`weak` and it is listed under "Still weak".
+no draft-stage audit to precede. The one failing check (Focus) was fixed on 2026-10-06 after the
+builder approved cutting gotchas that restated the body.
 
 | Check | Verdict | Evidence (from the skill) | Fixed |
 |---|---|---|---|
@@ -12,11 +12,4 @@ no draft-stage audit to precede. One check is not a pass and was left unfixed; i
 | Anti-Pattern | pass | SKILL.md:61–64 "never hand them the finding as a decision"; :78 "do NOT wrap, re-implement, or drive its runners"; :141–142 "Do not invent its mechanics"; :118 the copy never includes `.env` | — |
 | Example | pass | SKILL.md:64–65 "a seeded N+1 loop calling the API once per item is CRITICAL — fix it to one batched call, re-run, proceed"; :86–88 the exact skip message; :103 the exact install command | — |
 | Model Calibration | pass | The CRITICALs the lint counts (SKILL.md:59–72, and :23 in the checklist) are the severity label defined in references/script-efficiency-review.md, not emphasis; the other three (:61 BLOCKS, :78 NOT, :118 NEVER) each sit on a hard stop whose reason is in the same paragraph; no request to write out reasoning | — |
-| Focus | weak | Gotchas SKILL.md:146–150: three of the four entries restate the body (:146 ≈ :124–126 frozen copy; :148 ≈ :113–116 static block; :150 ≈ :118–120 `.env`) | — (see Still weak) |
-
-## Still weak
-
-- **Focus — Gotchas restate the steps.** Proposed fix: cut the three restating entries (frozen
-  copy, static block, `.env`) and keep the shared-config entry, so the section holds only
-  real-failure knowledge; grow it from the next real graduation failure. Leaving it out of this
-  backfill because removing gotchas is the builder's call.
+| Focus | fix | SKILL.md `## Gotchas` now holds only the shared-config entry, which records a real failure the body doesn't spell out | Cut three gotchas that restated the body (frozen copy, static block, `.env`) |

@@ -9,3 +9,4 @@ One line per change, newest last. Format: `[YYYY-MM-DD] What changed and why`.
 - [2026-10-02] Saved baseline case (input + judging rubric) so later changes to this skill can be replayed and proven safe.
 - [2026-10-02] Baseline case signals reworded so a replay can't pass by copying the worked example.
 - [2026-10-06] Backfilled the six-check self-critique record (cases/baseline/self-critique.md). Fix from it: the declined-signal rule and the one-skill attribution gotcha now say why. Still weak: the Scenario checks section repeats the replay rubric.
+- [2026-10-06] Deleted the Scenario checks section (it repeated the steps and the replay rubric); moved the offhand-phrasing rule into Step 4.
