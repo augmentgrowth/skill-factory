@@ -44,7 +44,8 @@ Map each surviving signal to the **one** skill responsible for the output being 
 Apply NOTHING yet. Present every surviving signal as a proposal, ranked:
 - **HIGH** — 2+ explicit same-direction corrections.
 - **MEDIUM** — 1 explicit correction, or a strong repeated pattern.
-- **LOW** — an inferred preference.
+- **LOW** — an inferred preference, or a single offhand phrasing. An offhand remark never rates
+  higher; one aside is not yet a correction.
 
 Each proposal shows: the **verbatim quoted signal(s)** from the session, the **target skill**, and
 the **exact edit** (before → after, or the new line to add).
@@ -93,14 +94,6 @@ Two explicit same-direction corrections → **one HIGH proposal**:
 Nothing is applied. On approval → one commit scoped to `weekly-report/`, plus
 `[2026-07-15] Learned from session: summary table leads, commentary follows`. If declined, the
 signal is dropped.
-
-## Scenario checks (these must hold from this text alone)
-
-- Two same-direction corrections → exactly one HIGH proposal quoting both; nothing applied before
-  approval.
-- A single offhand phrasing → no proposal, or LOW at most.
-- A correction already encoded in the target skill → no proposal (you read the skill in step 2).
-- Approval applies exactly the approved subset — no more, no less.
 
 ## Gotchas
 

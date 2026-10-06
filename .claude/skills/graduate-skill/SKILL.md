@@ -143,11 +143,5 @@ mechanics; if asked, say it is deferred and the skill's home stays its build hom
 
 ## Gotchas
 
-- **The installed copy is frozen at graduation.** It won't pick up later anneals — after a skill
-  self-heals in its build home, re-graduate to refresh the personal copy.
-- **Static skills graduate without an improvement protocol.** Check `static: true` before copying; the
-  anneal block must not travel with a static skill.
-- **`.env` never travels.** Only `.env.example` ships; the real `.env` is recreated on first use.
-
 - **Shared config must arrive on the first install.** Excluding every config.json loses portable
   committed settings; copy tracked, non-ignored config only when no installed config exists.

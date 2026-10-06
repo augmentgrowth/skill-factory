@@ -2,8 +2,7 @@
 
 Backfill run on 2026-10-06 for a skill built before the self-critique record existed. The six
 checks ran against SKILL.md as it stands (the skill has no references); there was no draft-stage
-audit to precede. One check is not a pass and was left unfixed; its row says `weak` and it is
-listed under "Still weak".
+audit to precede. The one failing check (Focus) was fixed on 2026-10-06 after the builder approved the cut.
 
 | Check | Verdict | Evidence (from the skill) | Fixed |
 |---|---|---|---|
@@ -12,10 +11,4 @@ listed under "Still weak".
 | Anti-Pattern | pass | SKILL.md:38 "Drop one-off phrasings, task-specific details, and restatements of existing content"; :107–108 a restating edit "is the top false-positive"; :70 never re-propose a declined signal | — |
 | Example | pass | SKILL.md:79–95 worked example: two verbatim corrections become one HIGH proposal with the exact before/after line and the CHANGELOG line it would ship with | — |
 | Model Calibration | pass | The three all-caps words (SKILL.md:15 PROPOSE-FIRST, :44 NOTHING, :75 ARE) all sit on the one approval rule, each with its reason (:13–16, :75–77); no request to write out reasoning; no generic "double-check" | — |
-| Focus | weak | SKILL.md:97–103 "Scenario checks" restates Steps 2, 4 and 5 and the worked example; three of its four checks are also the replay rubric (cases/baseline/expected.md:3–12), and the fourth repeats Step 2 (:34–35) and the first Gotcha (:107) | — (see Still weak) |
-
-## Still weak
-
-- **Focus — "Scenario checks" duplicates the replay rubric.** Proposed fix: delete SKILL.md:97–103,
-  first folding its one extra nuance — a single offhand phrasing is LOW at most — into Step 4's
-  LOW line. Leaving it out of this backfill because removing a section is the builder's call.
+| Focus | fix | Step 4's LOW bullet now carries the offhand-phrasing rule; the replay rubric (cases/baseline/expected.md) holds the scenario checks | Deleted the "Scenario checks" section, which repeated Steps 2, 4 and 5 and the replay rubric; moved its one unique rule into Step 4 |
