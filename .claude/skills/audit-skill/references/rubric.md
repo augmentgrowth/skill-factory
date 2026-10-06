@@ -232,7 +232,9 @@ skill has never seen.
 
 **L1 Factory-built skills keep the factory's records.** n.a. for skills the factory did not build.
 `CHANGELOG.md` present (a deliberate factory exception to "no README/CHANGELOG in a skill folder" —
-it keeps history out of SKILL.md); `cases/baseline/` present; a frozen skill marks it with top-level
+it keeps history out of SKILL.md); `cases/baseline/` present, with `self-critique.md` recording
+build-skill's six checks (a skill built before that record existed may lack it — report it, don't
+fail it); a frozen skill marks it with top-level
 `static: true` and carries no Improvement protocol block; credential-using skills ship `.env.example` and never `.env`.
 
 ## Sources and refreshing this rubric

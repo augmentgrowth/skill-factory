@@ -31,6 +31,10 @@ process requires on top of it.
 - [ ] **`cases/baseline/` present.** Both `input.md` (frozen sample input + invocation
       context) and `output-baseline.md` (Claude's captured no-skill output) exist and were
       written before drafting — so the side-by-side at the done gate is literal.
+- [ ] **Self-critique recorded.** `cases/baseline/self-critique.md` has all six checks from
+      `self-critique.md`, each with a pass/fix verdict, one line of evidence, and what was
+      fixed — written at Step 5 before the independent audit. Skills built before this record
+      existed may lack it; the lint reports that as a `check`, not a `fix`.
 - [ ] **Type-appropriate content.** Classified capability / knowledge / workflow per
       `templates/taxonomy.md`, and the skill emphasizes what that type demands
       (exact invocations / decision rules / chaining) rather than the wrong material.

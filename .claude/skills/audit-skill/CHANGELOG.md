@@ -12,3 +12,4 @@ One line per change, newest last. Format: `[YYYY-MM-DD] What changed and why`.
 - [2026-10-02] Running a skill's scripts during an audit is limited to ones that read local input and print output — never anything that sends, posts, deletes, spends or calls a network API (dry-run or read instead), never a vendored skill's. K1 targets the sample's data and computed outputs, not standing rules like a target. D2 lint: a negation must precede the match to downgrade it.
 
 - [2026-10-03] Scope command warnings to the adjacent command, recognize explicit trailing prohibitions, and report every unsafe command on mixed lines.
+- [2026-10-05] Lint L1 check: a skill with cases/baseline/ but no cases/baseline/self-critique.md is reported for review (check, not fix, so skills built before the record existed are not failed). Rubric L1 names the record.

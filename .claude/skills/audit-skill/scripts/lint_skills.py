@@ -564,6 +564,22 @@ def check_evals(rep: SkillReport, skill_dir: Path) -> None:
         rep.add("K1", "check", skill_dir / "SKILL.md", 1, "no cases/ or evals/ — nothing to replay to prove a change kept the skill working")
 
 
+def check_self_critique(rep: SkillReport, skill_dir: Path) -> None:
+    """L1: a factory-built skill (it has cases/baseline/) keeps build-skill's self-critique record.
+
+    Check-level, never fix: skills built before the record existed would otherwise hard-fail.
+    """
+    baseline = skill_dir / "cases" / "baseline"
+    if not baseline.is_dir():
+        return
+    has = (baseline / "self-critique.md").is_file()
+    rep.facts["has_self_critique"] = has
+    if not has:
+        rep.add("L1", "check", baseline / "self-critique.md", 1, "missing: cases/baseline/ has no "
+                "self-critique.md, so nothing records that build-skill's six self-critique checks ran "
+                "(built before the record existed, or skipped)")
+
+
 def lint(skill_dir: Path) -> SkillReport:
     skill_md = skill_dir / "SKILL.md"
     rep = SkillReport(skill=skill_dir.name, path=str(skill_dir))
@@ -576,6 +592,7 @@ def lint(skill_dir: Path) -> SkillReport:
     check_gotchas(rep, skill_md, lines)
     check_scripts(rep, skill_dir, "\n".join(lines))
     check_evals(rep, skill_dir)
+    check_self_critique(rep, skill_dir)
     rep.findings.sort(key=lambda f: (f.level != "fix", f.rule, f.file, f.line))
     return rep
 

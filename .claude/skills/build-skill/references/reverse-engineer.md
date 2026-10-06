@@ -41,7 +41,8 @@ Do **not** reuse the good session output as the baseline. The baseline must be C
 - **Step 4:** Draft the extracted skill from `templates/TEMPLATE_Skill.md`
   against `quality-bar.md`; scaffold Gotchas at birth. Credentials lazy (`.env.example`
   only if actually needed; never echo a value).
-- **Step 5:** Self-critique per `self-critique.md`; fix failures before showing the draft.
+- **Step 5:** Self-critique per `self-critique.md`, recorded in `cases/baseline/self-critique.md`
+  before the independent audit; fix failures before showing the draft.
 - **Step 6 (done gate):** Re-run the frozen input WITH the skill by explicit invocation;
   render baseline vs with-skill side by side. The builder judges — and should see the
   with-skill output matching the session quality. Loses or ties → back to Step 4. The
