@@ -34,7 +34,9 @@ ready to draft — ask more, or route to reverse-engineer instead.
 - **Step 4 (draft):** Draft from `templates/TEMPLATE_Skill.md` against
   `quality-bar.md`. Turn each interview finding into a principle **with its WHY**, not a
   step. Name the anti-patterns they gave you explicitly. Scaffold Gotchas at birth.
-- **Step 5 (self-critique):** Run `self-critique.md`; fix failures before showing the draft.
+- **Step 5 (self-critique):** Run `self-critique.md`, record the six results in
+  `cases/baseline/self-critique.md` before the independent audit, and fix failures before
+  showing the draft.
 - **Step 6 (done gate):** Re-run the same frozen input WITH the skill by explicit
   invocation; render baseline vs with-skill side by side; the builder judges. Loses or
   ties → back to Step 4. The gate will not close without the side-by-side shown.

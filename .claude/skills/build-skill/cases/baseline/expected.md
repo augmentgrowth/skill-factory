@@ -8,8 +8,10 @@ Judge the *process* and the *skill it produces*; never byte-diff.
 - [ ] The new skill's `cases/baseline/input.md` and `output-baseline.md` were written **before** any
       draft, and saved on their own as the birth save.
 - [ ] The type was named (workflow or knowledge) and the one-or-many split decided before drafting.
-- [ ] Step 5 ran the lint and the independent rubric review on the draft, and every P1/P2 finding was
-      fixed (or explicitly argued down) before the builder saw anything.
+- [ ] Step 5 ran the lint, wrote the six self-critique checks to the new skill's
+      `cases/baseline/self-critique.md` (verdict, evidence, fix for each) before the independent
+      rubric review, and every P1/P2 finding was fixed (or explicitly argued down) before the
+      builder saw anything.
 - [ ] The side-by-side (baseline vs with-skill, same input) was shown and the builder judged it
       before the done save; a loss or tie went back to drafting.
 - [ ] The done save touched only the new skill's folder; nothing was pushed without the remote being

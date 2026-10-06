@@ -150,6 +150,7 @@ window stays lean.
 This skill owns a `cases/` directory. At birth it holds one baseline pair:
 `cases/baseline/input.md` (the frozen sample input) and
 `cases/baseline/output-baseline.md` (Claude's no-skill output on that input).
-The with-skill test re-runs the same `input.md` and is judged against the
-baseline. Annealing adds a `cases/<name>/` for each failure it fixes, so the
+The build's self-critique adds `cases/baseline/self-critique.md`, the record
+of its six checks. The with-skill test re-runs the same `input.md` and is
+judged against the baseline. Annealing adds a `cases/<name>/` for each failure it fixes, so the
 skill regression-tests itself over time.

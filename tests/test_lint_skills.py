@@ -334,6 +334,36 @@ class LintTest(unittest.TestCase):
         d = self.skill(refs={"references/format.md": "# F\n", "scripts/ghost.sh": "echo hi\n"})
         self.assertIn("H2", self.rules(d))
 
+    # --- factory records -----------------------------------------------------
+
+    BASELINE = {"references/format.md": "# F\n",
+                "cases/baseline/input.md": "# Input\n",
+                "cases/baseline/output-baseline.md": "# No-skill output\n"}
+
+    def test_baseline_without_self_critique_is_a_check(self):
+        rep = lint_skills.lint(self.skill(refs=self.BASELINE))
+        l1 = [f for f in rep.findings if f.rule == "L1"]
+        self.assertEqual([(f.level, f.file) for f in l1],
+                         [("check", "cases/baseline/self-critique.md")])
+        self.assertIs(rep.facts["has_self_critique"], False)
+
+    def test_baseline_with_self_critique_has_no_l1(self):
+        refs = {**self.BASELINE, "cases/baseline/self-critique.md": "# Self-critique\n"}
+        rep = lint_skills.lint(self.skill(refs=refs))
+        self.assertNotIn("L1", {f.rule for f in rep.findings})
+        self.assertIs(rep.facts["has_self_critique"], True)
+
+    def test_no_baseline_means_no_self_critique_finding(self):
+        # Not factory-built (or no baseline yet): L1 is n.a., and K1 already covers "no cases".
+        refs = {"references/format.md": "# F\n", "cases/2026-01-01-x/input.md": "# I\n"}
+        rep = lint_skills.lint(self.skill(refs=refs))
+        self.assertNotIn("L1", {f.rule for f in rep.findings})
+        self.assertNotIn("has_self_critique", rep.facts)
+
+    def test_self_critique_record_is_not_an_orphan_reference(self):
+        refs = {**self.BASELINE, "cases/baseline/self-critique.md": "# Self-critique\n"}
+        self.assertNotIn("C3", self.rules(self.skill(refs=refs)))
+
     # --- discovery ----------------------------------------------------------
 
     def test_discovers_repo_root_layout(self):

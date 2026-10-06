@@ -32,7 +32,7 @@ Build progress:
 - [ ] 2. Baseline input + no-skill output saved; birth save made
 - [ ] 3. Type named; split decided
 - [ ] 4. Draft written; Gotchas scaffolded
-- [ ] 5. Lint has no fix findings; six checks pass; independent audit has no open P1/P2 — if not, back to step 4
+- [ ] 5. Lint has no fix findings; six checks pass and are recorded in cases/baseline/self-critique.md; independent audit has no open P1/P2 — if not, back to step 4
 - [ ] 6. Side-by-side shown; builder judged it a win — if lose/tie, back to step 4
 - [ ] 7. Saved, tagged, published; personal install offered
 ```
@@ -143,13 +143,25 @@ dependencies) so your own pass can spend its attention on judgment. Then run the
 checks in `references/self-critique.md` (Voice / Principles / Anti-Pattern / Example /
 Model Calibration / Focus) and fix what fails.
 
+**Record the six checks before the audit.** Write `cases/baseline/self-critique.md` in the new
+skill's folder — one row per check: pass or fix, one line of evidence from the draft, and what
+you fixed (template at the end of `references/self-critique.md`). Write it from the pass you
+actually ran, and only then dispatch the audit. Nothing else shows the checks ran: a real build
+skipped them, the lint and the audit both passed, and running them afterwards found no
+anti-pattern list and no examples.
+
 **Independent audit (every draft).** You wrote the draft, so you are the worst judge of it.
 Dispatch a **fresh sub-agent** with only three things: the draft's folder path, the path to
 `../audit-skill/SKILL.md` (relative to this skill's folder), and the instruction "Follow this
 audit skill's steps 1–4 on that one skill, report only — change nothing, and stop at the
 question. Run its scripts rather than trusting them, including feeding any checker a
-deliberately bad output — but never run anything that sends, posts, deletes or spends." Fix every P1 and P2 it reports (or say in one line why a finding
-does not apply),
+deliberately bad output — but never run anything that sends, posts, deletes or spends. Also
+open the skill's `cases/baseline/self-critique.md`: confirm it exists and covers all six checks,
+and test each verdict against the draft — a pass on Anti-Pattern needs anti-patterns named in
+the draft, a pass on Example needs a concrete example there. Report a missing file, a missing
+check, or a verdict the draft contradicts as P2." Fix every P1 and P2 it reports (or say in one
+line why a finding does not apply) — for a self-critique finding, run the failing checks for
+real, fix the draft, and rewrite the record —
 re-run the lint, and only then show the builder the draft. P3 items go into the honest
 assessment for the builder to decide.
 

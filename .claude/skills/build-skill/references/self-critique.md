@@ -1,8 +1,9 @@
 # Self-critique — the six checks
 
-Run this pass at Step 5, **before showing the builder the draft**. Review honestly
-against all six checks, fix what fails, then present an honest assessment — not a
-finished-product pitch. The organ wording below is preserved from vibe-skill-creator's
+Run this pass at Step 5, after the lint and **before the independent audit and before
+showing the builder the draft**. Review honestly against all six checks, fix what fails,
+record the result (see "Record the result" below), then present an honest assessment —
+not a finished-product pitch. The organ wording below is preserved from vibe-skill-creator's
 Step 6; keep the italic remedy lines intact.
 
 ### Voice Check
@@ -42,6 +43,32 @@ Step 6; keep the italic remedy lines intact.
 - [ ] Would removing any section make output worse?
 
 *If anything is "just in case," cut it.*
+
+## Record the result
+
+Write `cases/baseline/self-critique.md` in the new skill's folder before dispatching the
+independent audit. The auditor checks every verdict against the draft, so a row without real
+evidence reads as a check that never ran.
+
+```markdown
+# Self-critique — <skill-name>
+
+Checked <YYYY-MM-DD>, before the independent audit.
+
+| Check | Verdict | Evidence (from the draft) | Fixed |
+|---|---|---|---|
+| Voice | pass | SKILL.md:12 opens with the reviewer's rule of thumb, not a definition | — |
+| Principles | fix | SKILL.md:30–41 each step now gives its reason | Steps had no reasons; added the why to each |
+| Anti-Pattern | … | … | … |
+| Example | … | … | … |
+| Model Calibration | … | … | … |
+| Focus | … | … | … |
+```
+
+- All six rows, every time. Verdict is `pass` or `fix`; `fix` means it failed and you fixed it.
+- Evidence is one line: a file:line or a short quote showing where the draft *now* meets the check.
+- Fixed says what changed, or `—` for a pass. Anything you chose not to fix goes in "Still weak"
+  below, not here.
 
 ## Present with honesty
 
