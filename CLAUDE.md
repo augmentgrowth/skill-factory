@@ -221,6 +221,8 @@ judgment- or rubric-based, never a byte-diff.
 - **Baseline, written BEFORE drafting:** `cases/baseline/input.md` (a frozen sample input plus its
   invocation context) and `cases/baseline/output-baseline.md` (Claude's captured no-skill output). The
   side-by-side at test time is then literal: with-skill output vs this file.
+- **Self-critique record, written at Step 5 before the independent audit:** `cases/baseline/self-critique.md`
+  (one row per check, each with a verdict and evidence from the draft). The audit verifies it and the lint flags its absence.
 - **Live failures:** serialize to `cases/<date>-<slug>/` as `input.md` plus `expected.md` (observed-vs-
   expected notes, or a judgment rubric). Commit this before any fix attempt.
 - **Replay** = invoke the skill explicitly against the case's `input.md`, judged per `expected.md`.
