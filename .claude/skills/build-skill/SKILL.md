@@ -111,13 +111,17 @@ the factory's root — in a clone that is the repo root; under a plugin install 
 
 - **Strictness matches fragility.** For each step ask what happens if Claude does it
   differently: nothing much → prose with the reason; consequential (money, deleting,
-  sending, irreversible) → an exact command or a `scripts/` file.
+  sending, irreversible) → an exact command or a `scripts/` file. Before: "post the
+  summary to the team channel" as a prose step. After: "Run `scripts/post.py --dry-run`,
+  show the builder, then run it without `--dry-run`."
 - **Ordered jobs get a checklist** Claude copies and ticks off, with a "go back to step N"
   line wherever a check can fail; **quality-critical output gets a concrete check** (a
   script, rubric, or reference) to fix against and re-run.
 - **Write for current models:** plain imperatives with the reason, no all-caps MUST/NEVER,
   no over-explaining, no "write out your reasoning", key rules near the top. Record the
-  models you test on in `metadata` → `target-models`.
+  models you test on in `metadata` → `target-models`. Before: "Important: you must
+  always cite sources, no exceptions." After: "Cite a source for each claim; the reader
+  checks them before sending."
 
 **Don't teach to the test.** Rules and examples in the skill never quote the sample's data or
 the answers computed from it — this week's totals, per-row results, the expected output from
@@ -229,4 +233,3 @@ baseline vs with-skill. **The builder judges.**
   skills (verified 2026-07-15) — the with-skill test there is *always* a direct `SKILL.md`
   read, which is how `AGENTS.md` already routes into every skill. The `.claude/skills/<name>/`
   build location is still correct on both harnesses; only the auto-load rationale is Claude-specific.
-- [Grow this from real failures — replace/extend as the flow teaches you something.]

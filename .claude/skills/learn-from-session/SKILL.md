@@ -67,7 +67,8 @@ For each approved edit:
   `git -C <repo> push origin HEAD refs/tags/<skill>/rollback-<n> refs/tags/<skill>/review-<n>`.
   If refused, say once that it is saved on this machine only.
 
-**Declined signals are discarded** — never queued, never re-proposed from memory.
+**Declined signals are discarded** — never queued, never re-proposed from memory. The user
+already judged them; proposing one again asks them to say no twice.
 
 ### 6. Static skills
 A skill with `static: true` in its frontmatter still gets proposals here (proposals are proposals by
@@ -106,4 +107,4 @@ signal is dropped.
 - **Read the target skill before proposing.** Do not propose an edit that merely restates content
   the skill already contains — that is the top false-positive.
 - Attribute to exactly one skill; if a signal spans two, propose against whichever owns the corrected
-  output, not both.
+  output, not both. Two copies of one rule drift apart the first time either skill is edited.

@@ -13,3 +13,4 @@ One line per change, newest last. Format: `[YYYY-MM-DD] What changed and why`.
 
 - [2026-10-03] Scope command warnings to the adjacent command, recognize explicit trailing prohibitions, and report every unsafe command on mixed lines.
 - [2026-10-05] Lint L1 check: a skill with cases/baseline/ but no cases/baseline/self-critique.md is reported for review (check, not fix, so skills built before the record existed are not failed). Rubric L1 names the record.
+- [2026-10-06] Backfilled the six-check self-critique record (cases/baseline/self-critique.md); all six checks pass, no skill text changed.
