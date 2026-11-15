@@ -16,3 +16,4 @@ One line per change, newest last. Format: `[YYYY-MM-DD] What changed and why`.
 - [2026-10-02] Step 6 runs the factory lint on the patched skill before the green commit; a fix that adds a new fix-level finding (e.g. YAML the loader rejects) is not green.
 - [2026-10-02] Step 6 lint path carries the no-substitution fallback and compares against a lint run made before the first attempt.
 - [2026-10-02] Step 5 opens with the before-fix lint run that Step 6 compares against; a lint-driven correction counts as an attempt, keeping the loop bounded at 3.
+- [2026-11-13] Capture asks the builder nothing: the session writes `input.md`/`expected.md` from what it already saw, using the builder's correction as the target, and a recurring correction (wrong default, skipped step) now counts as a failure to capture. Capture friction was why misfires went unrecorded.

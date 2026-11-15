@@ -2,7 +2,8 @@
 name: improve-skill
 description: >-
   The factory's error-driven improvement loop. Fires when a skill failed, errored, or produced
-  wrong output during real use — "fix this skill", "the skill broke", "that skill is wrong",
+  wrong output during real use, including when the builder had to correct its output in a way
+  that will recur (a wrong default, a skipped step) — "fix this skill", "the skill broke", "that skill is wrong",
   "anneal this", "why did this fail", "make it self-heal". Also invoked automatically by the
   factory agent whenever a factory-built skill errors mid-task. Runs the bounded anneal
   transaction: capture the failing case, fix, replay, one commit — or roll back and escalate.
@@ -119,7 +120,13 @@ Absent flag = annealing on; continue.
 
 Serialize the failure so it survives any later rollback. **Capture takes no lock** — it is a
 write to a brand-new directory that nothing else is touching, and it must stay this mechanical so
-any session on any harness can do it reliably:
+any session on any harness can do it reliably.
+
+**Write the case yourself; never ask the builder for it.** The session already holds the evidence:
+what the skill was given, what it produced, and what the builder said was wrong or changed it to.
+Use the builder's correction as the target in `expected.md`. Asking them to explain, restate, or
+confirm the failure is the friction that stops failures from being captured at all. A steer about
+this run's content (a different topic, a one-off audience) is not a skill failure — leave it.
 
 1. Create `cases/<YYYY-MM-DD>-<slug>/` inside `<skill-folder>` (the resolved home, not a copy).
 2. `input.md` — the exact input plus invocation context needed to reproduce the failure.
